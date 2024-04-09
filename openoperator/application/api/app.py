@@ -14,6 +14,19 @@ from openoperator.domain.repository import PortfolioRepository, UserRepository, 
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
 
+from langchain_community.vectorstores.pgvector import PGVector
+from langchain_openai import OpenAIEmbeddings
+
+embeddings = OpenAIEmbeddings()
+
+store = PGVector(
+    collection_name=os.environ.get("POSTGRES_CONNECTION_STRING"),
+    connection_string=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+    embedding_function=embeddings,
+    use_jsonb=True
+)
+
+
 # System prompt for the AI Assistant
 llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
 Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.

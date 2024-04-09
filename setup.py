@@ -40,7 +40,9 @@ setup(name='openoperator',
         'pyjwt',
         'bcrypt',
         'PyMuPDF',
-        'paho-mqtt'
+        'paho-mqtt',
+        'langchain',
+        'langchain-community'
       ],
       python_requires='>=3.8',
       include_package_data=True,

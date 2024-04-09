@@ -44,7 +44,7 @@ For those interested in learning more about DDD and its benefits, here are some 
 
 Install from source:
 
-```
+```sh
 git clone https://github.com/syyclops/open-operator.git
 cd open-opertor/
 python3 -m pip install -e .
@@ -54,7 +54,7 @@ python3 -m pip install -e .
 
 1. Set the required environment variables:
 
-```
+```sh
 cp .env.example .env
 export OPENAI_API_KEY=<your secret key>
 export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
@@ -64,7 +64,7 @@ export API_TOKEN_SECRET=<your api secret key>
 
 2. Start the docker containers.
 
-```
+```sh
 docker compose up -d
 ```
 
