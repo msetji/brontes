@@ -431,7 +431,6 @@ async def upload_bacnet_data(
     return Response(content=str(e), status_code=500)
   
 def start():
-  print("Starting API server...")
   print(f"ENV: {os.environ.get('ENV')}")
   reload = True if os.environ.get("ENV") == "dev" or os.environ.get("ENV") == "beta" else False
   uvicorn.run("openoperator.application.api.app:app", host="0.0.0.0", port=8080, reload=reload)
