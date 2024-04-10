@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from langchain_community.vectorstores.pgvector import PGVector
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
 
 from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, OpenAIEmbeddings, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
 from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
@@ -30,10 +29,9 @@ Provide sources for your information using markdown formatting."""
 # Infrastructure/External Services
 ## Langchain
 embeddings = OpenAIEmbeddings()
-document_loader = UnstructuredAPIFileLoader(url=os.environ.get("UNSTRUCTURED_URL"), api_key=os.environ.get("UNSTRUCTURED_API_KEY"))
 vector_store = PGVector(
-    collection_name=os.environ.get("POSTGRES_CONNECTION_STRING"),
-    connection_string=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+    collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+    connection_string=os.environ.get("POSTGRES_CONNECTION_STRING"),
     embedding_function=embeddings,
     use_jsonb=True
 )
@@ -50,7 +48,7 @@ mqtt_client = MQTTClient()
 portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 user_repository = UserRepository(kg=knowledge_graph)
 facility_repository = FacilityRepository(kg=knowledge_graph)
-document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, document_loader=document_loader, vector_store=vector_store)
+document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
 cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
 device_repository = DeviceRepository(kg=knowledge_graph, embeddings=embeddings, blob_store=blob_store)

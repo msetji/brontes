@@ -1,11 +1,19 @@
+#!/usr/bin/env python
+
 from langchain_community.vectorstores.pgvector import PGVector
 from langchain_openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
+import os
 
 
-CONNECTION_STRING = "postgresql://postgres:postgres@localhost:5432/postgres"
 
-COLLECTION_NAME = "embeddings"
+
+CONNECTION_STRING = os.environ.get("POSTGRES_CONNECTION_STRING")
+
+COLLECTION_NAME = os.environ.get("POSTGRES_EMBEDDINGS_TABLE")
+
+print(CONNECTION_STRING)
+print(COLLECTION_NAME)
 
 embeddings = OpenAIEmbeddings()
 
