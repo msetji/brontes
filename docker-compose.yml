@@ -9,7 +9,7 @@ services:
     command: [
         "sh",
         "-c",
-        "sleep 15; python openoperator/application/api/app.py",
+        "sleep 15; poetry run openoperator/application/api/app.py",
       ] # wait for neo4j to start
     ports:
       - 8080:8080
