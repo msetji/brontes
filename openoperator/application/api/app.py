@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from typing import List, Generator, Literal
 import mimetypes
 import os
@@ -9,23 +11,14 @@ from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, PGVectorStore, UnstructuredDocumentLoader, OpenAIEmbeddings, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
+from langchain_community.vectorstores.pgvector import PGVector
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
+
+from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, OpenAIEmbeddings, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
 from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
-
-from langchain_community.vectorstores.pgvector import PGVector
-from langchain_openai import OpenAIEmbeddings
-
-embeddings = OpenAIEmbeddings()
-
-store = PGVector(
-    collection_name=os.environ.get("POSTGRES_CONNECTION_STRING"),
-    connection_string=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
-    embedding_function=embeddings,
-    use_jsonb=True
-)
-
 
 # System prompt for the AI Assistant
 llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
@@ -34,15 +27,22 @@ Make sure to always follow ASHRAE guildelines.
 Be succinct and to the point.
 Provide sources for your information using markdown formatting."""
 
-# Infrastructure
+# Infrastructure/External Services
+## Langchain
+embeddings = OpenAIEmbeddings()
+document_loader = UnstructuredAPIFileLoader(url=os.environ.get("UNSTRUCTURED_URL"), api_key=os.environ.get("UNSTRUCTURED_API_KEY"))
+vector_store = PGVector(
+    collection_name=os.environ.get("POSTGRES_CONNECTION_STRING"),
+    connection_string=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+    embedding_function=embeddings,
+    use_jsonb=True
+)
+## Custom
 knowledge_graph = KnowledgeGraph()
 blob_store = AzureBlobStore()
-document_loader = UnstructuredDocumentLoader()
-embeddings = OpenAIEmbeddings()
 postgres = Postgres()
-vector_store = PGVectorStore(postgres=postgres, embeddings=embeddings)
 timescale = Timescale(postgres=postgres)
-llm = OpenaiLLM(model_name="gpt-4-0125-preview", system_prompt=llm_system_prompt)
+llm = OpenaiLLM(model_name="gpt-4-turbo", system_prompt=llm_system_prompt)
 audio = OpenaiAudio()
 mqtt_client = MQTTClient()
 

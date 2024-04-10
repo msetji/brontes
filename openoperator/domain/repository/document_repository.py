@@ -1,15 +1,19 @@
-from openoperator.domain.model.document import Document, DocumentQuery, DocumentMetadataChunk
-from openoperator.infrastructure import KnowledgeGraph, BlobStore, DocumentLoader, VectorStore
 import fitz
 import io
+import os
 from uuid import uuid4
 from typing import List, Literal
+import tempfile
+from langchain.vectorstores.base import VectorStore
+from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
+
+from openoperator.domain.model.document import Document, DocumentQuery, DocumentMetadataChunk
+from openoperator.infrastructure import KnowledgeGraph, BlobStore
 
 class DocumentRepository:
-  def __init__(self, kg: KnowledgeGraph, blob_store: BlobStore, document_loader: DocumentLoader, vector_store: VectorStore):
+  def __init__(self, kg: KnowledgeGraph, blob_store: BlobStore, vector_store: VectorStore):
     self.kg = kg
     self.blob_store = blob_store
-    self.document_loader = document_loader
     self.vector_store = vector_store
 
   def list(self, facility_uri: str) -> List[Document]:
@@ -65,7 +69,20 @@ class DocumentRepository:
         
   def run_extraction_process(self, portfolio_uri: str, facility_uri, file_content: bytes, file_name: str, doc_uri: str, doc_url: str):
     try:
-      docs = self.document_loader.load(file_content=file_content, file_path=file_name)
+      # Create tempfile because we need to pass in file path not file contents
+      temp_file = tempfile.NamedTemporaryFile(delete=False)
+      temp_file.write(file_content)
+
+      # Extract text from document
+      loader = UnstructuredAPIFileLoader(
+        url=os.environ.get("UNSTRUCTURED_URL"), 
+        api_key=os.environ.get("UNSTRUCTURED_API_KEY"),
+        file_path=temp_file.name
+      )
+      docs = loader.load()
+
+      # Clean up temp file
+      temp_file.close()
     except Exception as e:
       self.update_extraction_status(doc_uri, "failed")
       raise e
@@ -98,7 +115,8 @@ class DocumentRepository:
           raise ValueError(f"Document with uri {uri} not found")
       url = data[0]['url']
       self.blob_store.delete_file(url)
-      self.vector_store.delete_documents(filter={"document_uri": uri})
+      self.vector_store.delete()
+      # self.vector_store.de(filter={"document_uri": uri})
     except Exception as e:
       raise e
     
@@ -113,4 +131,4 @@ class DocumentRepository:
       query_filter = {"facility_uri": params.facility_uri}
     if params.document_uri:
       query_filter['document_uri'] = params.document_uri
-    return self.vector_store.similarity_search(query=query, limit=limit, filter=query_filter)
+    return self.vector_store.similarity_search(query=query, k=limit, filter=query_filter)
