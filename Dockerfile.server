@@ -1,18 +1,21 @@
-FROM python:3.10-slim
+FROM python:3.11-buster
 
-# Install libpq
-RUN apt-get update && apt-get install -y libpq-dev
+RUN pip install poetry==1.4.2
 
-WORKDIR /usr/src/app
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
 
-COPY openoperator/ openoperator/
-COPY setup.py setup.py
-COPY README.md README.md
+WORKDIR /app
 
-RUN python3 -m pip install -e . && \
-    pip install python-dotenv && \
-    rm -rf /root/.cache/pip
+COPY pyproject.toml poetry.lock ./
+RUN touch README.md
 
-EXPOSE 8080
+RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
 
-CMD ["python", "openoperator/application/api/app.py"]
+COPY openoperator ./openoperator
+
+RUN poetry install --without dev
+
+ENTRYPOINT ["poetry", "run", "openoperator/application/api/app.py"]
