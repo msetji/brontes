@@ -14,8 +14,7 @@ import uvicorn
 from langchain_community.vectorstores.pgvector import PGVector
 from langchain_openai import OpenAIEmbeddings
 
-from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, OpenAIEmbeddings, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
-from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
+from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
 
@@ -30,10 +29,10 @@ Provide sources for your information using markdown formatting."""
 ## Langchain
 embeddings = OpenAIEmbeddings()
 vector_store = PGVector(
-    collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
-    connection_string=os.environ.get("POSTGRES_CONNECTION_STRING"),
-    embedding_function=embeddings,
-    use_jsonb=True
+  collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+  connection_string=os.environ.get("POSTGRES_CONNECTION_STRING"),
+  embedding_function=embeddings,
+  use_jsonb=True
 )
 ## Custom
 knowledge_graph = KnowledgeGraph()
@@ -45,6 +44,7 @@ audio = OpenaiAudio()
 mqtt_client = MQTTClient()
 
 # Repositories
+from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 user_repository = UserRepository(kg=knowledge_graph)
 facility_repository = FacilityRepository(kg=knowledge_graph)
@@ -430,6 +430,8 @@ async def upload_bacnet_data(
   except HTTPException as e:
     return Response(content=str(e), status_code=500)
   
-if __name__ == "__main__":
+def start():
+  print("Starting API server...")
+  print(f"ENV: {os.environ.get('ENV')}")
   reload = True if os.environ.get("ENV") == "dev" or os.environ.get("ENV") == "beta" else False
   uvicorn.run("openoperator.application.api.app:app", host="0.0.0.0", port=8080, reload=reload)

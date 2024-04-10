@@ -48,6 +48,8 @@ For those interested in learning more about DDD and its benefits, here are some 
 - Python
 - [Poetry](https://python-poetry.org/docs/)
 
+_To make poetry create a virtualenv: poetry config virtualenvs.in-project true_
+
 2. Set the required environment variables:
 
 ```sh

@@ -18,4 +18,4 @@ COPY openoperator ./openoperator
 
 RUN poetry install --without dev
 
-ENTRYPOINT ["poetry", "run", "openoperator/application/api/app.py"]
+ENTRYPOINT ["poetry", "run", "server"]
