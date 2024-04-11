@@ -2,8 +2,6 @@ from openoperator.domain.repository import DocumentRepository
 from openoperator.domain.model import DocumentQuery
 from typing import List, Generator
 import copy
-import json
-from langchain.tools.retriever import create_retriever_tool
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage
 from langchain.tools import tool
@@ -16,7 +14,7 @@ class AIAssistantService:
     self.vector_store = document_repository.vector_store
     self.prompt = hub.pull("hwchase17/openai-tools-agent")
   
-  async def chat(self, portfolio_uri: str, messages: List[BaseMessage], facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False):
+  async def chat(self, portfolio_uri: str, messages: List[BaseMessage], facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
     messages = copy.deepcopy(messages) # Copy the messages so we don't modify the original
 
     @tool
@@ -57,6 +55,7 @@ class AIAssistantService:
             print(
                 f"Done agent: {event['name']} with output: {event['data'].get('output')['output']}"
             )
+            return
       if kind == "on_chat_model_stream":
         content = event["data"]["chunk"].content
         if content:

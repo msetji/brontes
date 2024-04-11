@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from typing import List, Generator, Literal
+from typing_extensions import TypedDict
 import mimetypes
 import os
 import jwt
-import json
 from io import BytesIO
 from fastapi import FastAPI, UploadFile, Depends, Security, HTTPException, BackgroundTasks
 from fastapi.responses import Response, JSONResponse, StreamingResponse
@@ -13,11 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
+from langchain_core.messages import AIMessage, SystemMessage, HumanMessage, BaseMessage
 
-from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
+from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
 from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
-from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
+from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, DeviceCreateParams
 
 # System prompt for the AI Assistant
 llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
@@ -108,9 +109,11 @@ async def login(email: str, password: str) -> JSONResponse:
     return JSONResponse(content={"message": f"Unable to login: {e}"}, status_code=500)
 
 ## AI ROUTES
-@app.post("/chat", tags=["AI"], response_model=Generator[LLMChatResponse, None, None])
+@app.post("/chat", tags=["AI"], response_model=Generator[str, None, None])
 async def chat(
-  messages: list[Message],
+  messages: list[
+    TypedDict("Message", {"content": str, "role": Literal[ "user", "assistant"]})
+  ],
   portfolio_uri: str,
   facility_uri: str | None = None,
   document_uri: str | None = None,
@@ -118,10 +121,13 @@ async def chat(
 ) -> StreamingResponse:
   if document_uri and not facility_uri:
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
+  
+  messages: List[BaseMessage] = [HumanMessage(content=message["content"]) if message["role"] == "user" else AIMessage(content=message["content"]) for message in messages]
+  messages.insert(0, SystemMessage(content=llm_system_prompt))
 
   async def event_stream() -> Generator[str, None, None]:
-    for response in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
-      yield f"event: message\ndata: {json.dumps(response.model_dump())}\n\n"
+    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+      yield f"event: message\ndata: {chunk}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")
 
