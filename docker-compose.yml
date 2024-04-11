@@ -6,15 +6,6 @@ services:
       dockerfile: ./Dockerfile.server
     volumes:
       - ./open-operator:/app/open-operator
-      - ./wait-for-it.sh:/wait-for-it.sh
-    command: [
-        "/wait-for-it.sh",
-        "INFO  Started.",
-        "--",
-        "poetry",
-        "run",
-        "server",
-      ] # wait for neo4j to start
     ports:
       - 8080:8080
     env_file:
