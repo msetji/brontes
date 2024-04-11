@@ -6,11 +6,7 @@ services:
       dockerfile: ./Dockerfile.server
     volumes:
       - .:/usr/src/app
-    command: [
-        "sh",
-        "-c",
-        "sleep 15; poetry run openoperator/application/api/app.py",
-      ] # wait for neo4j to start
+    command: ["sh", "-c", "sleep 15; poetry run server"] # wait for neo4j to start
     ports:
       - 8080:8080
     env_file:
