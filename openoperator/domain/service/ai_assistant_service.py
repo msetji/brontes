@@ -1,22 +1,20 @@
 from openoperator.domain.repository import DocumentRepository
-from openoperator.infrastructure import LLM
 from openoperator.domain.model import DocumentQuery
 from typing import List, Generator
 import copy
 import json
 from langchain.tools.retriever import create_retriever_tool
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage, AIMessage, ToolMessage
-from langchain.tools import BaseTool, StructuredTool, tool
+from langchain_core.messages import BaseMessage
+from langchain.tools import tool
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain import hub
-from langchain_core.utils.function_calling import convert_to_openai_function
 
 class AIAssistantService:
   def __init__(self, document_repository: DocumentRepository):
     self.document_repository = document_repository
     self.vector_store = document_repository.vector_store
-
+    self.prompt = hub.pull("hwchase17/openai-tools-agent")
   
   async def chat(self, portfolio_uri: str, messages: List[BaseMessage], facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False):
     messages = copy.deepcopy(messages) # Copy the messages so we don't modify the original
@@ -27,45 +25,52 @@ class AIAssistantService:
       document_query = DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri)
       return str(self.document_repository.search(document_query))
 
-
     tools = [search_documents]
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
-    llm_with_tools = llm.bind_tools(tools)
+    agent = create_openai_tools_agent(llm.with_config({"tags": ["agent_llm"]}), tools, self.prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False).with_config(
+      {"run_name": "Agent"}
+    )
 
-    while True:
-      first_chunk = True
-      gathered_chunks = None
+    input_message = messages.pop(-1)
+    input = input_message.content
 
-      async for chunk in llm_with_tools.astream(messages):
-        # Check if its selecting a tool
-        if 'tool_calls' in chunk.additional_kwargs:
-          if first_chunk:
-            gathered_chunks = chunk
-            first_chunk = False
-          else:
-            gathered_chunks = gathered_chunks + chunk
-        else:
-          yield chunk
-
-      # Check if the model wants to use tools
-      if gathered_chunks is not None:
-        
-        # Remove index from all chunnks in gathered_chunks
-        for chunk in gathered_chunks.additional_kwargs['tool_calls']:
-          del chunk['index']
-        messages.append(AIMessage(content=gathered_chunks.content, additional_kwargs=gathered_chunks.additional_kwargs))
-
-        for chunk in gathered_chunks.additional_kwargs['tool_calls']:
-          tool_name = chunk['function']['name']
-          tool_args = chunk['function']['arguments']
-          tool_id = chunk['id']
-          print(f"Using tool: {tool_name} with args: {tool_args}")
-
-          if tool_name == "search_documents":
-            query = json.loads(tool_args)['query']
-            result = search_documents(query)
-            messages.append(ToolMessage(content=result, tool_call_id=tool_id))
-      else:
-        return
-        
-      
+    async for event in agent_executor.astream_events({
+      "input": input,
+      "chat_history": messages
+    }, version="v1"):
+      kind = event["event"]
+      if kind == "on_chain_start":
+        if (
+            event["name"] == "Agent"
+        ):  # Was assigned when creating the agent with `.with_config({"run_name": "Agent"})`
+          pass
+            # print(
+            #     f"Starting agent: {event['name']} with input: {event['data'].get('input')}"
+            # )
+      elif kind == "on_chain_end":
+        if (
+            event["name"] == "Agent"
+        ):  # Was assigned when creating the agent with `.with_config({"run_name": "Agent"})`
+            print()
+            print("--")
+            print(
+                f"Done agent: {event['name']} with output: {event['data'].get('output')['output']}"
+            )
+      if kind == "on_chat_model_stream":
+        content = event["data"]["chunk"].content
+        if content:
+          yield content
+            # Empty content in the context of OpenAI means
+            # that the model is asking for a tool to be invoked.
+            # So we only print non-empty content
+            # print(content, end="|")
+      elif kind == "on_tool_start":
+        print("--")
+        print(
+            f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}"
+        )
+      elif kind == "on_tool_end":
+        print(f"Done tool: {event['name']}")
+        print(f"Tool output was: {event['data'].get('output')}")
+        print("--")

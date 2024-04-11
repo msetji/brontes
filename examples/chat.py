@@ -60,8 +60,8 @@ async def main():
 
     content = ""
     async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, verbose=verbose):
-      print(chunk.content, end="", flush=True)
-      content += chunk.content
+      print(chunk, end="", flush=True)
+      content += chunk
 
     messages.append(AIMessage(content=content))
 
