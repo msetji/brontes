@@ -1,11 +1,17 @@
-from openoperator.infrastructure import AzureBlobStore, UnstructuredDocumentLoader, PGVectorStore, KnowledgeGraph, OpenAIEmbeddings, OpenaiLLM, Postgres 
+#!/usr/bin/env python
+
+from openoperator.infrastructure import AzureBlobStore, KnowledgeGraph 
 from openoperator.domain.repository import DocumentRepository
 from openoperator.domain.service import AIAssistantService
 import argparse
-from dotenv import load_dotenv
-load_dotenv()
+from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage, AIMessage
+from langchain_postgres import PGVector
+from langchain_openai import OpenAIEmbeddings
+import asyncio
+import os
 
-def main():
+
+async def main():
   # Create the argument parser
   parser = argparse.ArgumentParser()
   parser.add_argument('--portfolio_uri', type=str, help='The portfolio ID to use for the chat', default="https://syyclops.com/example")
@@ -24,19 +30,23 @@ def main():
   # Infrastructure
   knowledge_graph = KnowledgeGraph()
   blob_store = AzureBlobStore()
-  document_loader = UnstructuredDocumentLoader()
   embeddings = OpenAIEmbeddings()
-  postgres = Postgres()
-  vector_store = PGVectorStore(postgres=postgres, embeddings=embeddings)
-  llm = OpenaiLLM(model_name="gpt-4-0125-preview", system_prompt=llm_system_prompt)
+  vector_store = PGVector(
+    collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+    connection=os.environ.get("POSTGRES_CONNECTION_STRING"),
+    embeddings=embeddings,
+    use_jsonb=True
+  )
 
   # Repositories
-  document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, document_loader=document_loader, vector_store=vector_store)
+  document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
 
   # Services
-  ai_assistant_service = AIAssistantService(llm=llm, document_repository=document_repository)
+  ai_assistant_service = AIAssistantService(document_repository=document_repository)
 
-  messages = []
+  messages = [
+    SystemMessage(content=llm_system_prompt)
+  ]
 
   while True:
     # Get input from user
@@ -46,26 +56,17 @@ def main():
     if user_input == "exit":
       break
 
-    messages.append({
-        "role": "user",
-        "content": user_input
-    })
+    messages.append(HumanMessage(content=user_input))
 
     content = ""
-    for response in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, verbose=verbose):
-      if response.type == "tool_selected":
-        print(f"Tool selected: {response.tool_name}")
-      if response.type == "content":
-        content = response.content
-        print(content, flush=True, end="")
+    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, verbose=verbose):
+      print(chunk.content, end="", flush=True)
+      content += chunk.content
 
-    messages.append({
-        "role": "assistant",
-        "content": content
-    })
+    messages.append(AIMessage(content=content))
 
     print()
 
 
 if __name__ == "__main__":
-  main()
+  asyncio.run(main())

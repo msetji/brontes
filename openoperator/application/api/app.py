@@ -15,6 +15,7 @@ from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 
 from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
+from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
 
@@ -39,19 +40,17 @@ knowledge_graph = KnowledgeGraph()
 blob_store = AzureBlobStore()
 postgres = Postgres()
 timescale = Timescale(postgres=postgres)
-llm = OpenaiLLM(model_name="gpt-4-turbo", system_prompt=llm_system_prompt)
 audio = OpenaiAudio()
 mqtt_client = MQTTClient()
 
 # Repositories
-from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 user_repository = UserRepository(kg=knowledge_graph)
 facility_repository = FacilityRepository(kg=knowledge_graph)
 document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
 cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
-device_repository = DeviceRepository(kg=knowledge_graph, embeddings=embeddings, blob_store=blob_store)
+device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
 
 # Services
 base_uri = "https://syyclops.com/"
@@ -63,7 +62,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(llm=llm, document_repository=document_repository)
+ai_assistant_service = AIAssistantService(document_repository=document_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Open Operator API")
