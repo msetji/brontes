@@ -112,8 +112,14 @@ class DocumentRepository:
       raise e
 
     try:
-      print(docs)
-      self.vector_store.add_documents(docs)
+      ids = self.vector_store.add_documents(docs)
+
+      # Update the document node in the knowledge graph to have the ids from the vector store
+      with self.kg.create_session() as session:
+        query = "MATCH (d:Document {uri: $uri}) SET d.vectorStoreIds = $ids RETURN d"
+        result = session.run(query, uri=doc_uri, ids=ids)
+        data = result.data()
+        if len(data) == 0: raise ValueError("Document not updated")
     except Exception as e:
       self.update_extraction_status(doc_uri, "failed")
       raise e
@@ -126,16 +132,15 @@ class DocumentRepository:
     """
     try:
       with self.kg.create_session() as session:
-        query = "MATCH (d:Document {uri: $uri}) WITH d, d.url as url DETACH DELETE d RETURN url"
+        query = "MATCH (d:Document {uri: $uri}) WITH d, d.url as url, d.vectorStoreIds as vectorStoreIds DETACH DELETE d RETURN url, vectorStoreIds"
         result = session.run(query, uri=uri)
         data = result.data()
         if len(data) == 0:
           raise ValueError(f"Document with uri {uri} not found")
       url = data[0]['url']
       self.blob_store.delete_file(url)
-      # TODO: Delete from vector store
-      # self.vector_store.delete()
-      # self.vector_store.de(filter={"document_uri": uri})
+      if 'vectorStoreIds' in data[0]:
+        self.vector_store.delete(ids=data[0]['vectorStoreIds'])
     except Exception as e:
       raise e
     
