@@ -147,16 +147,15 @@ class DocumentRepository:
     limit = params.limit
 
     filter = {
-      'portfolio_uri':{'$in': [params.portfolio_uri]}
+      'portfolio_uri':{'$eq': params.portfolio_uri}
     }
     if params.facility_uri:
-      filter['facility_uri'] = {'$in': [params.facility_uri]}
+      filter['facility_uri'] = {'$eq': [params.facility_uri]}
     if params.document_uri:
-      filter['document_uri'] = {'$in': [params.document_uri]}
+      filter['document_uri'] = {'$eq': [params.document_uri]}
       
     try:
       docs = self.vector_store.similarity_search(query=query, k=limit, filter=filter)
-
       return [DocumentMetadataChunk(content=doc.page_content, metadata=doc.metadata) for doc in docs]
     except Exception as e:
       raise e

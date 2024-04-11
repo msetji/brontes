@@ -11,7 +11,7 @@ from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from langchain_community.vectorstores.pgvector import PGVector
+from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 
 from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
@@ -30,8 +30,8 @@ Provide sources for your information using markdown formatting."""
 embeddings = OpenAIEmbeddings()
 vector_store = PGVector(
   collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
-  connection_string=os.environ.get("POSTGRES_CONNECTION_STRING"),
-  embedding_function=embeddings,
+  connection=os.environ.get("POSTGRES_CONNECTION_STRING"),
+  embeddings=embeddings,
   use_jsonb=True
 )
 ## Custom
@@ -231,7 +231,7 @@ async def delete_document(
       status_code=400
     )
   
-## DEVICES ROUTES
+# ## DEVICES ROUTES
 @app.get("/devices", tags=['Devices'], response_model=List[Device])
 async def list_devices(
   facility_uri: str,
