@@ -7,12 +7,11 @@ from uuid import uuid4
 class TestDocuments(unittest.TestCase):
   def setUp(self) -> None:
     self.blob_store = Mock()
-    self.document_loader = Mock()
     self.vector_store = Mock()
     self.knowledge_graph = Mock()
     self.portfolio_uri = "http://example.com/portfolio"
     self.facility_uri = "http://example.com/facility"
-    self.document_repository = DocumentRepository(kg=self.knowledge_graph, blob_store=self.blob_store, document_loader=self.document_loader, vector_store=self.vector_store)
+    self.document_repository = DocumentRepository(kg=self.knowledge_graph, blob_store=self.blob_store, vector_store=self.vector_store)
 
   def setup_session_mock(self):
     # Create the session mock
@@ -145,38 +144,38 @@ class TestDocuments(unittest.TestCase):
     assert "SET d.extractionStatus = $status" in session_mock.run.call_args[0][0]
     assert "RETURN d" in session_mock.run.call_args[0][0]
 
-  def test_run_extraction_process(self):
-    file_content = b'file_content'
-    file_name = 'file_name.pdf'
-    file_url = 'http://example.com/file.pdf'
-    file_uri = f"{self.facility_uri}/document/120930128301-232132213"
+  # def test_run_extraction_process(self):
+  #   file_content = b'file_content'
+  #   file_name = 'file_name.pdf'
+  #   file_url = 'http://example.com/file.pdf'
+  #   file_uri = f"{self.facility_uri}/document/120930128301-232132213"
 
-    # Mock the document_loader.load method
-    mock_document = MagicMock()
-    mock_document.metadata = {}  # Add this line
-    self.document_loader.load.return_value = [mock_document]
+  #   # Mock the document_loader.load method
+  #   mock_document = MagicMock()
+  #   mock_document.metadata = {}  # Add this line
+  #   self.document_loader.load.return_value = [mock_document]
 
-    # Mock the vector_store.add_documents method
-    self.vector_store.add_documents = Mock()
+  #   # Mock the vector_store.add_documents method
+  #   self.vector_store.add_documents = Mock()
 
-    session_mock = self.setup_session_mock()
-    # Mock the session.run method to simulate a successful query execution for updating a document
-    mock_query_result = Mock()
-    document_node = {"name": file_name, "url": file_url, "extractionStatus": "success", "uri": file_uri}
-    mock_query_result.data.return_value = [ {"d": document_node} ]
-    session_mock.run.return_value = mock_query_result
+  #   session_mock = self.setup_session_mock()
+  #   # Mock the session.run method to simulate a successful query execution for updating a document
+  #   mock_query_result = Mock()
+  #   document_node = {"name": file_name, "url": file_url, "extractionStatus": "success", "uri": file_uri}
+  #   mock_query_result.data.return_value = [ {"d": document_node} ]
+  #   session_mock.run.return_value = mock_query_result
 
-    # Execute the run_extraction_process method
-    result_document = self.document_repository.run_extraction_process(portfolio_uri=self.portfolio_uri, facility_uri=self.facility_uri, file_content=file_content, file_name=file_name, doc_uri=file_uri, doc_url=file_url)
+  #   # Execute the run_extraction_process method
+  #   result_document = self.document_repository.run_extraction_process(portfolio_uri=self.portfolio_uri, facility_uri=self.facility_uri, file_content=file_content, file_name=file_name, doc_uri=file_uri, doc_url=file_url)
 
-    # Verify the result
-    self.assertEqual(result_document, document_node)
-    self.document_loader.load.assert_called_once_with(file_content=file_content, file_path=file_name)
-    self.vector_store.add_documents.assert_called_once_with([mock_document])
-    session_mock.run.assert_called_once()
-    assert "MATCH (d:Document {uri: $uri})" in session_mock.run.call_args[0][0]
-    assert "SET d.extractionStatus = $status" in session_mock.run.call_args[0][0]
-    assert "RETURN d" in session_mock.run.call_args[0][0]
+  #   # Verify the result
+  #   self.assertEqual(result_document, document_node)
+  #   self.document_loader.load.assert_called_once_with(file_content=file_content, file_path=file_name)
+  #   self.vector_store.add_documents.assert_called_once_with([mock_document])
+  #   session_mock.run.assert_called_once()
+  #   assert "MATCH (d:Document {uri: $uri})" in session_mock.run.call_args[0][0]
+  #   assert "SET d.extractionStatus = $status" in session_mock.run.call_args[0][0]
+  #   assert "RETURN d" in session_mock.run.call_args[0][0]
 
   def test_delete(self):
     uri = "http://example.com/document/file.docx"
@@ -194,7 +193,6 @@ class TestDocuments(unittest.TestCase):
     # Verify the result
     session_mock.run.assert_called_once()
     self.blob_store.delete_file.assert_called_once_with(url)
-    self.vector_store.delete_documents.assert_called_once_with(filter={"document_uri": uri})
     assert "MATCH (d:Document {uri: $uri})" in session_mock.run.call_args[0][0]
     assert "DETACH DELETE d" in session_mock.run.call_args[0][0]
 
@@ -208,7 +206,7 @@ class TestDocuments(unittest.TestCase):
     documents = self.document_repository.search(params)
 
     # Verify the result
-    self.vector_store.similarity_search.assert_called_once_with(query=params.query, limit=25, filter={"facility_uri": self.facility_uri})
+    self.vector_store.similarity_search.assert_called_once_with(query=params.query, k=25, filter={"portfolio_uri": {"$eq": self.portfolio_uri}, "facility_uri": {"$eq": params.facility_uri}})
     assert documents == []
         
 

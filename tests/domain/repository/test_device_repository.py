@@ -7,10 +7,8 @@ class TestDeviceManager(unittest.TestCase):
   def setUp(self, mock_knowledge_graph):
     mock_kg = mock_knowledge_graph.return_value
     self.facility_uri = "https://openoperator.com/exampleCustomer/exampleFacility"
-    embeddings = Mock()
-    # timescale = Mock()
     blob_store = Mock()
-    self.device_repository = DeviceRepository(kg=mock_kg, embeddings=embeddings, blob_store=blob_store)
+    self.device_repository = DeviceRepository(kg=mock_kg, blob_store=blob_store)
 
   def setup_session_mock(self):
     # Create the session mock
@@ -89,25 +87,6 @@ class TestDeviceManager(unittest.TestCase):
     assert devices[0].device_name == "test_device"
     assert devices[0].uri == "https://openoperator.com/facility/device"
     assert devices[1].device_name == "test_device2"
-
-  @patch('openoperator.domain.repository.device_repository.DeviceRepository.get_devices')
-  def test_vectorize_graph(self, mock_devices):
-    mock_devices.return_value = [
-      {
-        "device_name": "test_device",
-        "uri": "https://openoperator.com/facility/device"
-      }
-    ]
-    self.device_repository.embeddings.create_embeddings.return_value = [Mock(embedding=[0.1, 0.2, 0.3])]
-    session_mock = self.setup_session_mock()
-    self.device_repository.vectorize(facility_uri=self.facility_uri)
-
-    assert self.device_repository.embeddings.create_embeddings.call_count == 1
-    self.device_repository.embeddings.create_embeddings.assert_called_with(['test_device'])
-
-    # Check calls to session.run contain the correct Cypher query for devices and points
-    device_query_call = [call for call in session_mock.run.call_args_list if "MATCH (n:Device)" in str(call)]
-    self.assertTrue(device_query_call, "Device vectors not uploaded correctly.")
 
   @patch('openoperator.domain.repository.device_repository.DeviceRepository.get_devices')
   def test_cluster_devices(self, mock_devices):
