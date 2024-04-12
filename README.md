@@ -46,9 +46,9 @@ For those interested in learning more about DDD and its benefits, here are some 
 
 - [Docker](https://www.docker.com/get-started/)
 - Python
-- [Poetry](https://python-poetry.org/docs/)
+- [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
-_To make poetry create a virtualenv: poetry config virtualenvs.in-project true_
+_To make poetry create a virtualenv in the project: poetry config virtualenvs.in-project true_
 
 2. Set the required environment variables:
 
@@ -60,10 +60,18 @@ export AZURE_CONTAINER_NAME=<your azure container name>
 export API_TOKEN_SECRET=<your api secret key>
 ```
 
-3. Start the docker containers.
+3. Start the server
+
+**Using docker containers**:
 
 ```sh
 docker compose up -d
+```
+
+**Using poetry**:
+
+```sh
+poetry run server
 ```
 
 4. View the api docs at: http://localhost:8080/docs
