@@ -18,12 +18,12 @@ class AIAssistantService:
     messages = copy.deepcopy(messages) # Copy the messages so we don't modify the original
 
     @tool
-    def search_documents(query: str):
-      """Search documents for metadata. These documents are drawings/plans, O&M manuals, etc."""
+    def search_building_information(query: str):
+      """This tool is useful when you need to lookup information specific to the portfolio or building the user is referring to. It returns more context that will help you answer their question. Provide a query that will be used to search for the information."""
       document_query = DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri)
       return str(self.document_repository.search(document_query))
 
-    tools = [search_documents]
+    tools = [search_building_information]
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
     agent = create_openai_tools_agent(llm.with_config({"tags": ["agent_llm"]}), tools, self.prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False).with_config(
