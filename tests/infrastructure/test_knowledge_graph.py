@@ -14,7 +14,7 @@ class TestKnowledgeGraph(unittest.TestCase):
         .with_bind_ports(7687, 7687)
       )
     neo4j_container.start()
-    wait_for_logs(neo4j_container, "Started")
+    wait_for_logs(neo4j_container, "Started", timeout=30)
     self.neo4j_container = neo4j_container
 
     self.kg = KnowledgeGraph(neo4j_uri=url, neo4j_user=username, neo4j_password=password)
