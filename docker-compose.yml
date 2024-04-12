@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: ./Dockerfile.server
     volumes:
-      - ./open-operator:/app/open-operator
+      - ./openoperator:/app/openoperator
     ports:
       - 8080:8080
     env_file:
