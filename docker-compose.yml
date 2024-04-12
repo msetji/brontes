@@ -51,14 +51,6 @@ services:
       - $HOME/neo4j/logs:/logs
       - $HOME/neo4j/import:/var/lib/neo4j/import
       - $HOME/neo4j/plugins:/plugins
-    environment:
-      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
-      NEO4J_apoc_export_file_enabled: true
-      NEO4J_apoc_import_file_enabled: true
-      NEO4J_apoc_import_file_use__neo4j__config: true
-      NEO4J_dbms_security_procedures_unrestricted: apoc.*,semantics.*
-      NEO4J_PLUGINS: '["apoc", "n10s"]'
-      dbms.directories.import: "/"
     ports:
       - 7474:7474
       - 7687:7687
