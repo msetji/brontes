@@ -10,10 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      neo4j:
-        image: neo4j_with_plugins
-
     strategy:
       matrix:
         python-version: ["3.10"]
