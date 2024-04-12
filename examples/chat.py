@@ -4,7 +4,7 @@ from openoperator.infrastructure import AzureBlobStore, KnowledgeGraph
 from openoperator.domain.repository import DocumentRepository
 from openoperator.domain.service import AIAssistantService
 import argparse
-from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 import asyncio
@@ -22,10 +22,9 @@ async def main():
 
   llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
   Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.
-  Make sure to always follow ASHRAE guildelines.
-  Don't be too wordy. Don't be too short. Be just right.
-  Don't make up information. If you don't know, say you don't know.
-  Always respond with markdown formatted text."""
+  Your answer should be as short and concise as possible while still being informative.
+  You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
+  Use the search information tool when necessary to get more context to answer the question, and always provide your sources in markdown formatting."""
 
   # Infrastructure
   knowledge_graph = KnowledgeGraph()

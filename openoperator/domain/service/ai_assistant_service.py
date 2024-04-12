@@ -26,7 +26,7 @@ class AIAssistantService:
     tools = [search_building_information]
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
     agent = create_openai_tools_agent(llm.with_config({"tags": ["agent_llm"]}), tools, self.prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False).with_config(
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=verbose).with_config(
       {"run_name": "Agent"}
     )
 
@@ -50,11 +50,12 @@ class AIAssistantService:
         if (
             event["name"] == "Agent"
         ):  # Was assigned when creating the agent with `.with_config({"run_name": "Agent"})`
-            print()
-            print("--")
-            print(
-                f"Done agent: {event['name']} with output: {event['data'].get('output')['output']}"
-            )
+            # if verbose:
+            #   print()
+            #   print("--")
+            #   print(
+            #       f"Done agent: {event['name']} with output: {event['data'].get('output')['output']}"
+            #   )
             return
       if kind == "on_chat_model_stream":
         content = event["data"]["chunk"].content
@@ -65,11 +66,15 @@ class AIAssistantService:
             # So we only print non-empty content
             # print(content, end="|")
       elif kind == "on_tool_start":
-        print("--")
-        print(
-            f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}"
-        )
+        pass
+        # if verbose:
+        #   print("--")
+        #   print(
+        #       f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}"
+        #   )
       elif kind == "on_tool_end":
-        print(f"Done tool: {event['name']}")
-        print(f"Tool output was: {event['data'].get('output')}")
-        print("--")
+        pass
+        # if verbose:
+        #   print(f"Done tool: {event['name']}")
+        #   print(f"Tool output was: {event['data'].get('output')}")
+        #   print("--")
