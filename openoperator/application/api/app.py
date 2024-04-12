@@ -1,35 +1,46 @@
+#!/usr/bin/env python
+
 from typing import List, Generator, Literal
+from typing_extensions import TypedDict
 import mimetypes
 import os
 import jwt
-import json
 from io import BytesIO
 from fastapi import FastAPI, UploadFile, Depends, Security, HTTPException, BackgroundTasks
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, PGVectorStore, UnstructuredDocumentLoader, OpenAIEmbeddings, Postgres, Timescale, OpenaiLLM, OpenaiAudio, MQTTClient
+from langchain_postgres import PGVector
+from langchain_openai import OpenAIEmbeddings
+from langchain_core.messages import AIMessage, SystemMessage, HumanMessage, BaseMessage
+
+from openoperator.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
 from openoperator.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
 from openoperator.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
-from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, Message, LLMChatResponse, DeviceCreateParams
+from openoperator.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, DeviceCreateParams
 
 # System prompt for the AI Assistant
 llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
 Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.
-Make sure to always follow ASHRAE guildelines.
-Be succinct and to the point.
-Provide sources for your information using markdown formatting."""
+Your answer should be as short and concise as possible while still being informative.
+You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
+Use the search information tool when necessary to get more context to answer the question, and always provide your sources in markdown formatting."""
 
-# Infrastructure
+# Infrastructure/External Services
+## Langchain
+embeddings = OpenAIEmbeddings()
+vector_store = PGVector(
+  collection_name=os.environ.get("POSTGRES_EMBEDDINGS_TABLE"),
+  connection=os.environ.get("POSTGRES_CONNECTION_STRING"),
+  embeddings=embeddings,
+  use_jsonb=True
+)
+## Custom
 knowledge_graph = KnowledgeGraph()
 blob_store = AzureBlobStore()
-document_loader = UnstructuredDocumentLoader()
-embeddings = OpenAIEmbeddings()
 postgres = Postgres()
-vector_store = PGVectorStore(postgres=postgres, embeddings=embeddings)
 timescale = Timescale(postgres=postgres)
-llm = OpenaiLLM(model_name="gpt-4-0125-preview", system_prompt=llm_system_prompt)
 audio = OpenaiAudio()
 mqtt_client = MQTTClient()
 
@@ -37,10 +48,10 @@ mqtt_client = MQTTClient()
 portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 user_repository = UserRepository(kg=knowledge_graph)
 facility_repository = FacilityRepository(kg=knowledge_graph)
-document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, document_loader=document_loader, vector_store=vector_store)
+document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
 cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
-device_repository = DeviceRepository(kg=knowledge_graph, embeddings=embeddings, blob_store=blob_store)
+device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
 
 # Services
 base_uri = "https://syyclops.com/"
@@ -52,7 +63,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(llm=llm, document_repository=document_repository)
+ai_assistant_service = AIAssistantService(document_repository=document_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Open Operator API")
@@ -98,9 +109,11 @@ async def login(email: str, password: str) -> JSONResponse:
     return JSONResponse(content={"message": f"Unable to login: {e}"}, status_code=500)
 
 ## AI ROUTES
-@app.post("/chat", tags=["AI"], response_model=Generator[LLMChatResponse, None, None])
+@app.post("/chat", tags=["AI"], response_model=Generator[str, None, None])
 async def chat(
-  messages: list[Message],
+  messages: list[
+    TypedDict("Message", {"content": str, "role": Literal[ "user", "assistant"]})
+  ],
   portfolio_uri: str,
   facility_uri: str | None = None,
   document_uri: str | None = None,
@@ -108,10 +121,13 @@ async def chat(
 ) -> StreamingResponse:
   if document_uri and not facility_uri:
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
+  
+  messages: List[BaseMessage] = [HumanMessage(content=message["content"]) if message["role"] == "user" else AIMessage(content=message["content"]) for message in messages]
+  messages.insert(0, SystemMessage(content=llm_system_prompt))
 
   async def event_stream() -> Generator[str, None, None]:
-    for response in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
-      yield f"event: message\ndata: {json.dumps(response.model_dump())}\n\n"
+    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+      yield f"event: message\ndata: {chunk}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -220,7 +236,7 @@ async def delete_document(
       status_code=400
     )
   
-## DEVICES ROUTES
+# ## DEVICES ROUTES
 @app.get("/devices", tags=['Devices'], response_model=List[Device])
 async def list_devices(
   facility_uri: str,
@@ -419,6 +435,7 @@ async def upload_bacnet_data(
   except HTTPException as e:
     return Response(content=str(e), status_code=500)
   
-if __name__ == "__main__":
+def start():
+  print(f"ENV: {os.environ.get('ENV')}")
   reload = True if os.environ.get("ENV") == "dev" or os.environ.get("ENV") == "beta" else False
   uvicorn.run("openoperator.application.api.app:app", host="0.0.0.0", port=8080, reload=reload)

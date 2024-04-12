@@ -5,12 +5,7 @@ services:
       context: .
       dockerfile: ./Dockerfile.server
     volumes:
-      - .:/usr/src/app
-    command: [
-        "sh",
-        "-c",
-        "sleep 15; python openoperator/application/api/app.py",
-      ] # wait for neo4j to start
+      - ./openoperator:/app/openoperator
     ports:
       - 8080:8080
     env_file:
@@ -70,19 +65,19 @@ services:
     networks:
       - local
 
-  mqtt-broker:
-    image: emqx/emqx:5.1.6
-    ports:
-      - 1883:1883
-      - 8883:8883
-      - 8083:8083
-      - 8084:8084
-      - 18083:18083
-    volumes:
-      - ./emqx/data:/opt/emqx/data
-      - ./emqx/log:/opt/emqx/log
-    networks:
-      - local
+  # mqtt-broker:
+  #   image: emqx/emqx:5.1.6
+  #   ports:
+  #     - 1883:1883
+  #     - 8883:8883
+  #     - 8083:8083
+  #     - 8084:8084
+  #     - 18083:18083
+  #   volumes:
+  #     - ./emqx/data:/opt/emqx/data
+  #     - ./emqx/log:/opt/emqx/log
+  #   networks:
+  #     - local
 
 networks:
   local:

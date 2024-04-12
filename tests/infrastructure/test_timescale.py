@@ -15,7 +15,7 @@ class TestTimescale(unittest.TestCase):
       mock_cursor().__enter__().fetchone.side_effect = [[False], None, None]
       self.timescale.__init__(self.postgres)
       # Assert that execute was called 7 times (for all the possible execute calls)
-      self.assertEqual(mock_cursor().__enter__().execute.call_count, 7)
+      self.assertEqual(mock_cursor().__enter__().execute.call_count, 5)
 
   def test_get_timeseries(self):
     timeseriesIds = ['id1', 'id2']

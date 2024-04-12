@@ -8,13 +8,16 @@ class Timescale:
     collection_name = 'timeseries'
     try:
       with self.postgres.cursor() as cur:
-        cur.execute('CREATE EXTENSION IF NOT EXISTS timescaledb') # Create timescaledb extension
-        cur.execute(f'SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = \'{collection_name}\')') # Check if timeseries table exists
-        if not cur.fetchone()[0]: cur.execute(f'CREATE TABLE {collection_name} (ts timestamptz NOT NULL, value FLOAT NOT NULL, timeseriesid TEXT NOT NULL)') # Create timeseries table if it doesn't exist
-        cur.execute(f'SELECT * FROM timescaledb_information.hypertables WHERE hypertable_name = \'{collection_name}\'') # Check if hypertable exists
-        if not cur.fetchone(): cur.execute(f'SELECT create_hypertable(\'{collection_name}\', \'ts\')') # Create hypertable if it doesn't exist
-        cur.execute(f'SELECT indexname FROM pg_indexes WHERE tablename = \'{collection_name}\' AND indexname = \'{collection_name}_timeseriesid_ts_idx\'') # Check if the table has the timeseriesid index
-        if not cur.fetchone(): cur.execute(f'CREATE INDEX {collection_name}_timeseriesid_ts_idx ON {collection_name} (timeseriesid, ts DESC)') # Create the timeseriesid index if it doesn't exist
+        # Create timescaledb extension
+        cur.execute('CREATE EXTENSION IF NOT EXISTS timescaledb') 
+
+        # Check if timeseries table exists
+        cur.execute(f'SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = \'{collection_name}\')') 
+        if not cur.fetchone()[0]: 
+          cur.execute(f'CREATE TABLE {collection_name} (ts timestamptz NOT NULL, value FLOAT NOT NULL, timeseriesid TEXT NOT NULL)') # Create timeseries table if it doesn't exist
+          cur.execute(f'SELECT create_hypertable(\'{collection_name}\', \'ts\')') # Create hypertable if it doesn't exist
+          cur.execute(f'CREATE INDEX {collection_name}_timeseriesid_ts_idx ON {collection_name} (timeseriesid, ts DESC)') # Create the timeseriesid index if it doesn't exist
+          self.postgres.conn.commit()
     except Exception as e:
       raise e
   

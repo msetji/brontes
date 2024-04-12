@@ -1,15 +1,20 @@
-from openoperator.domain.model.document import Document, DocumentQuery, DocumentMetadataChunk
-from openoperator.infrastructure import KnowledgeGraph, BlobStore, DocumentLoader, VectorStore
 import fitz
 import io
+import os
 from uuid import uuid4
 from typing import List, Literal
+import tempfile
+from langchain.vectorstores import VectorStore
+from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from openoperator.domain.model.document import Document, DocumentQuery, DocumentMetadataChunk
+from openoperator.infrastructure import KnowledgeGraph, BlobStore
 
 class DocumentRepository:
-  def __init__(self, kg: KnowledgeGraph, blob_store: BlobStore, document_loader: DocumentLoader, vector_store: VectorStore):
+  def __init__(self, kg: KnowledgeGraph, blob_store: BlobStore, vector_store: VectorStore):
     self.kg = kg
     self.blob_store = blob_store
-    self.document_loader = document_loader
     self.vector_store = vector_store
 
   def list(self, facility_uri: str) -> List[Document]:
@@ -65,20 +70,56 @@ class DocumentRepository:
         
   def run_extraction_process(self, portfolio_uri: str, facility_uri, file_content: bytes, file_name: str, doc_uri: str, doc_url: str):
     try:
-      docs = self.document_loader.load(file_content=file_content, file_path=file_name)
+      # Create tempfile because we need to pass in file path not file contents
+      _, file_extension = os.path.splitext(file_name)
+      temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
+      temp_file.write(file_content)
+
+      # Extract text from document
+      loader = UnstructuredAPIFileLoader(
+        url=os.environ.get("UNSTRUCTURED_URL"), 
+        api_key=os.environ.get("UNSTRUCTURED_API_KEY"),
+        mode="elements",
+        file_path=temp_file.name,
+        strategy="fast",
+        pdf_infer_table_structure=True,
+        skip_infer_table_types=[""],
+        max_characters=1500,
+        new_after_n_chars=1500,
+        chunking_strategy="by_title",
+        combine_under_n_chars=500,
+        coordinates=True
+      )
+      docs = loader.load()
+      text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,
+        chunk_overlap=20,
+      )
+      docs = text_splitter.split_documents(docs)
+
+      # Clean up temp file
+      temp_file.close()
+
+      # Add metadata to vector store
+      for doc in docs:
+        doc.metadata['source'] = file_name
+        doc.metadata['portfolio_uri'] = portfolio_uri
+        doc.metadata['facility_uri'] = facility_uri
+        doc.metadata['document_uri'] = doc_uri
+        doc.metadata['document_url'] = doc_url
     except Exception as e:
       self.update_extraction_status(doc_uri, "failed")
       raise e
 
     try:
-      # Add metadata to vector store
-      for doc in docs:
-        doc.metadata['portfolio_uri'] = portfolio_uri
-        doc.metadata['facility_uri'] = facility_uri
-        doc.metadata['document_uri'] = doc_uri
-        doc.metadata['document_url'] = doc_url
-    
-      self.vector_store.add_documents(docs)
+      ids = self.vector_store.add_documents(docs)
+
+      # Update the document node in the knowledge graph to have the ids from the vector store
+      with self.kg.create_session() as session:
+        query = "MATCH (d:Document {uri: $uri}) SET d.vectorStoreIds = $ids RETURN d"
+        result = session.run(query, uri=doc_uri, ids=ids)
+        data = result.data()
+        if len(data) == 0: raise ValueError("Document not updated")
     except Exception as e:
       self.update_extraction_status(doc_uri, "failed")
       raise e
@@ -91,14 +132,15 @@ class DocumentRepository:
     """
     try:
       with self.kg.create_session() as session:
-        query = "MATCH (d:Document {uri: $uri}) WITH d, d.url as url DETACH DELETE d RETURN url"
+        query = "MATCH (d:Document {uri: $uri}) WITH d, d.url as url, d.vectorStoreIds as vectorStoreIds DETACH DELETE d RETURN url, vectorStoreIds"
         result = session.run(query, uri=uri)
         data = result.data()
         if len(data) == 0:
           raise ValueError(f"Document with uri {uri} not found")
       url = data[0]['url']
       self.blob_store.delete_file(url)
-      self.vector_store.delete_documents(filter={"document_uri": uri})
+      if 'vectorStoreIds' in data[0]:
+        self.vector_store.delete(ids=data[0]['vectorStoreIds'])
     except Exception as e:
       raise e
     
@@ -108,9 +150,17 @@ class DocumentRepository:
     """
     query = params.query
     limit = params.limit
-    query_filter = {"portfolio_uri": params.portfolio_uri}
+
+    filter = {
+      'portfolio_uri':{'$eq': params.portfolio_uri}
+    }
     if params.facility_uri:
-      query_filter = {"facility_uri": params.facility_uri}
+      filter['facility_uri'] = {'$eq': params.facility_uri}
     if params.document_uri:
-      query_filter['document_uri'] = params.document_uri
-    return self.vector_store.similarity_search(query=query, limit=limit, filter=query_filter)
+      filter['document_uri'] = {'$eq': params.document_uri}
+      
+    try:
+      docs = self.vector_store.similarity_search(query=query, k=limit, filter=filter)
+      return [DocumentMetadataChunk(content=doc.page_content, metadata=doc.metadata) for doc in docs]
+    except Exception as e:
+      raise e

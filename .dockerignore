@@ -15,3 +15,4 @@ ontology/
 examples/
 docs/
 data/
+.venv/

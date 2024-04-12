@@ -40,21 +40,19 @@ For those interested in learning more about DDD and its benefits, here are some 
 ["Domain-Driven Design: Tackling Complexity in the Heart of Software"](https://fabiofumarola.github.io/nosql/readingMaterial/Evans03.pdf) by Eric Evans
 ["Implementing Domain-Driven Design"](https://dl.ebooksworld.ir/motoman/AW.Implementing.Domain-Driven.Design.www.EBooksWorld.ir.pdf) by Vaughn Vernon
 
-## Installation
+## Quickstart
 
-Install from source:
+1. Prerequisites
 
-```
-git clone https://github.com/syyclops/open-operator.git
-cd open-opertor/
-python3 -m pip install -e .
-```
+- [Docker](https://www.docker.com/get-started/)
+- Python
+- [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
-## Local Server Quickstart
+_To make poetry create a virtualenv in the project: poetry config virtualenvs.in-project true_
 
-1. Set the required environment variables:
+2. Set the required environment variables:
 
-```
+```sh
 cp .env.example .env
 export OPENAI_API_KEY=<your secret key>
 export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
@@ -62,13 +60,21 @@ export AZURE_CONTAINER_NAME=<your azure container name>
 export API_TOKEN_SECRET=<your api secret key>
 ```
 
-2. Start the docker containers.
+3. Start the server
 
-```
+**Using docker containers**:
+
+```sh
 docker compose up -d
 ```
 
-3. View the api docs at: http://localhost:8080/docs
+**Using poetry**:
+
+```sh
+poetry run server
+```
+
+4. View the api docs at: http://localhost:8080/docs
 
 ## Useful Resources
 

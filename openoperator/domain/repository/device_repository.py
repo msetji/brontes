@@ -1,14 +1,13 @@
 from openoperator.domain.model import Device, Point, DeviceCreateParams
-from openoperator.infrastructure import KnowledgeGraph, Embeddings, BlobStore
+from openoperator.infrastructure import KnowledgeGraph, BlobStore
 from openoperator.utils import dbscan_cluster
 import os
 import numpy as np
 from uuid import uuid4
 
 class DeviceRepository:
-  def __init__(self, kg: KnowledgeGraph, embeddings: Embeddings, blob_store: BlobStore):
+  def __init__(self, kg: KnowledgeGraph,  blob_store: BlobStore):
     self.kg = kg
-    self.embeddings = embeddings
     self.blob_store = blob_store
   
   def get_devices(self, facility_uri: str, component_uri: str | None = None) -> list[Device]:
@@ -96,32 +95,7 @@ class DeviceRepository:
     unique_id = str(uuid4())
     url = self.blob_store.upload_file(file_content=rdf_string.encode(), file_name=f"{unique_id}_cobie.ttl", file_type="text/turtle")
     self.kg.import_rdf_data(url)
-    
-  def vectorize(self, facility_uri: str):
-    """
-    For each device in the facility, create an embedding and upload it to the graph.
-    """
-    devices = self.get_devices(facility_uri)
-    texts = [device['device_name'] for device in devices]
-    embeddings = self.embeddings.create_embeddings(texts)
-
-    id_vector_pairs = []
-    for i, device in enumerate(devices):
-      id_vector_pairs.append({
-          "id": device['uri'],
-          "vector": np.array(embeddings[i].embedding)
-      })
-
-    # Upload the vectors to the graph
-    query = """UNWIND $id_vector_pairs as pair
-                MATCH (n:Device) WHERE n.uri = pair.id
-                CALL db.create.setNodeVectorProperty(n, 'embedding', pair.vector)
-                RETURN n"""
-    try:
-      with self.kg.create_session() as session:
-        session.run(query, id_vector_pairs=id_vector_pairs)
-    except Exception as e:
-      raise e
+  
     
   def cluster_devices(self, facility_uri: str):
     """
