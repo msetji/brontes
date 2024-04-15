@@ -1,12 +1,12 @@
 on:
   push:
     branches:
-      - beta
+      - staging
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
-      - beta
-name: Beta Deploy
+      - staging
+name: Staging Deploy
 
 jobs:
   build-and-deploy:

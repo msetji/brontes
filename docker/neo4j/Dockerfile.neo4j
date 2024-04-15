@@ -8,10 +8,10 @@ RUN chmod -R 777 /data
 USER neo4j
 
 # Copy plugins
-COPY neo4j_plugins/apoc-*.jar plugins/
-COPY neo4j_plugins/neosemantics-*.jar plugins/
+COPY /docker/neo4j/plugins/apoc-*.jar plugins/
+COPY /docker/neo4j/plugins/neosemantics-*.jar plugins/
 
-COPY apoc.conf conf/
+COPY /docker/neo4j/apoc.conf conf/
 
 ENV NEO4J_apoc_export_file_enabled=true \
     NEO4J_apoc_import_file_enabled=true \

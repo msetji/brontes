@@ -12,10 +12,10 @@ class MQTTClient:
   - error handling and logging TODO
   """
   def __init__(self, host: str | None = None, username: str | None = None, password: str | None = None, port=8883):
-    self.host = host if host is not None else os.getenv('MQTT_BROKER_ADDRESS')
+    self.host = host if host is not None else os.environ['MQTT_BROKER_ADDRESS']
     self.port = port
-    self.username = username if username is not None else os.getenv('MQTT_USERNAME')
-    self.password = password if password is not None else os.getenv('MQTT_PASSWORD')
+    self.username = username if username is not None else os.environ['MQTT_USERNAME']
+    self.password = password if password is not None else os.environ['MQTT_PASSWORD']
     self.client = paho.Client(paho.CallbackAPIVersion.VERSION2, client_id="", userdata=None, protocol=paho.MQTTv5)
     self.client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
     self.client.username_pw_set(username=self.username, password=self.password)

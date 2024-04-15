@@ -118,16 +118,18 @@ class MQTT2Timescale:
       except KeyError as e:
         print(f"Missing expected key in data: {e}")
 
-mqtt_client = MQTTClient()
-postgres = Postgres()
-timescale = Timescale(postgres=postgres)
 
-app = MQTT2Timescale(mqtt_client=mqtt_client, ts=timescale)
+def start():
+  mqtt_client = MQTTClient()
+  postgres = Postgres()
+  timescale = Timescale(postgres=postgres)
 
-app.start_message_listener(topic="#")
+  app = MQTT2Timescale(mqtt_client=mqtt_client, ts=timescale)
 
-def on_exit():
-  app.stop()
-  mqtt_client.disconnect()
+  app.start_message_listener(topic="#")
 
-atexit.register(on_exit)
+  def on_exit():
+    app.stop()
+    mqtt_client.disconnect()
+
+  atexit.register(on_exit)

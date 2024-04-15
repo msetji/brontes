@@ -45,3 +45,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 server = "openoperator.application.api.app:start"
+mqtt2timescale = "openoperator.application.mqtt.mqtt2timescale:start"
