@@ -1,7 +1,15 @@
-FROM python:3.11-buster
+# Use a multi-stage build to keep the final image size down
+FROM python:3.11-buster as builder
 
+# Install poetry at specified version
 RUN pip install poetry==1.4.2
 
+# Install PostgreSQL client libraries
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for poetry
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
     POETRY_VIRTUALENVS_CREATE=1 \
@@ -9,16 +17,37 @@ ENV POETRY_NO_INTERACTION=1 \
 
 WORKDIR /app
 
+# Copy only the files needed for the poetry installation
 COPY pyproject.toml poetry.lock ./
-RUN touch README.md
 
-RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
+# Create an empty README to avoid errors, run installation, and remove cache directory
+RUN touch README.md && \
+    poetry install --without dev --no-root && \
+    rm -rf $POETRY_CACHE_DIR
 
+# Use the official slim image for the runtime
+FROM python:3.11-slim-buster
+
+# Install PostgreSQL client libraries in the runtime image
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from the builder stage
+COPY --from=builder /app /app
+
+WORKDIR /app
+
+# Copy the application code and the wait-for-it script
 COPY openoperator openoperator
-COPY /docker/wait-for-it.sh wait-for-it.sh
+COPY docker/wait-for-it.sh wait-for-it.sh
+
+# Make the script executable
 RUN chmod +x wait-for-it.sh
 
-RUN poetry install --without dev
-RUN poetry self add poetry-dotenv-plugin
+# Install dotenv plugin
+RUN pip install poetry==1.4.2 && \
+    poetry self add poetry-dotenv-plugin
 
+# Final command to run the application
 CMD ["./wait-for-it.sh", "neo4j_with_plugins:7474", "--", "poetry", "run", "server"]
