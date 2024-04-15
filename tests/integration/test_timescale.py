@@ -6,7 +6,8 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
 class TestTimescale(unittest.TestCase):
-  def setUp(self) -> None:
+  @classmethod
+  def setUpClass(self) -> None:
     postgres_container = DockerContainer("pg").with_exposed_ports(5432).with_bind_ports(5432, 5432)
     postgres_container.start()
     self.postgres_continaer = postgres_container
@@ -21,7 +22,8 @@ class TestTimescale(unittest.TestCase):
     self.postgres = Postgres(connection_string=conn_string)
     self.timescale = Timescale(postgres=self.postgres)
 
-  def tearDown(self) -> None:
+  @classmethod
+  def tearDownClass(self) -> None:
     self.postgres_continaer.stop()
 
   def test_setup_db(self):

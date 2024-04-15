@@ -9,9 +9,9 @@ class KnowledgeGraph():
           neo4j_password: str | None = None,        
   ) -> None:
     """Initialize the Neo4j driver."""
-    self.neo4j_uri = neo4j_uri or os.getenv('NEO4J_URI')
-    self.neo4j_user = neo4j_user or os.getenv('NEO4J_USER')
-    self.neo4j_password = neo4j_password or os.getenv('NEO4J_PASSWORD')
+    neo4j_uri = neo4j_uri or os.environ['NEO4J_URI']
+    neo4j_user = neo4j_user or os.environ['NEO4J_USER']
+    neo4j_password = neo4j_password or os.environ['NEO4J_PASSWORD']
     
     neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password), max_connection_lifetime=200)
     neo4j_driver.verify_connectivity()

@@ -1,6 +1,8 @@
-version: "3.0"
+version: "3.8"
 services:
   open-operator-server:
+    container_name: server
+    image: server
     build:
       context: .
       dockerfile: ./Dockerfile.server
@@ -11,23 +13,26 @@ services:
     env_file:
       - .env
     environment:
-      - NEO4J_URI=bolt://neo4j:7687
-      - POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@postgres:5432/postgres
+      - NEO4J_URI=bolt://neo4j_with_plugins:7687
+      - POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@pg:5432/postgres
       - UNSTRUCTURED_URL=http://unstructured:8000
     networks:
       - local
     depends_on:
-      - neo4j
-      - postgres
+      - neo4j_with_plugins
+      - pg
 
   unstructured:
+    container_name: unstructured
     image: quay.io/unstructured-io/unstructured-api:latest
     ports:
       - 8000:8000
     networks:
       - local
 
-  postgres:
+  pg:
+    container_name: pg
+    image: pg
     build:
       context: .
       dockerfile: ./Dockerfile.pg
@@ -38,7 +43,9 @@ services:
     networks:
       - local
 
-  neo4j:
+  neo4j_with_plugins:
+    container_name: neo4j_with_plugins
+    image: neo4j_with_plugins
     build:
       context: .
       dockerfile: ./Dockerfile.neo4j
@@ -52,20 +59,6 @@ services:
       - 7687:7687
     networks:
       - local
-
-  # mqtt-broker:
-  #   image: emqx/emqx:5.1.6
-  #   ports:
-  #     - 1883:1883
-  #     - 8883:8883
-  #     - 8083:8083
-  #     - 8084:8084
-  #     - 18083:18083
-  #   volumes:
-  #     - ./emqx/data:/opt/emqx/data
-  #     - ./emqx/log:/opt/emqx/log
-  #   networks:
-  #     - local
 
 networks:
   local:
