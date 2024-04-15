@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - stagin
+      - staging
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
