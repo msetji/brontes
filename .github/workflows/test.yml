@@ -38,6 +38,6 @@ jobs:
       - name: "Build the postgres image"
         run: docker build -f Dockerfile.pg -t pg .
       - name: Run the unit test
-        run: poetry run pytest/tests/unit -vv -s
+        run: poetry run pytest tests/unit -vv -s
       - name: Run the integration test
-        run: poetry run pytest/tests/integration -vv -s
+        run: poetry run pytest tests/integration -vv -s
