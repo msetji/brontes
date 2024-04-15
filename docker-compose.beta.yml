@@ -1,10 +1,10 @@
-version: "3.0"
+version: "3.8"
 
 services:
   open-operator-server:
     build:
       context: .
-      dockerfile: ./Dockerfile.server
+      dockerfile: ./docker/Dockerfile.server
     volumes:
       - ./openoperator:/app/openoperator
     ports:

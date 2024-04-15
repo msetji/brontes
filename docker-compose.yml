@@ -5,7 +5,7 @@ services:
     image: server
     build:
       context: .
-      dockerfile: ./Dockerfile.server
+      dockerfile: ./docker/Dockerfile.server
     volumes:
       - ./openoperator:/app/openoperator
     ports:
@@ -35,7 +35,7 @@ services:
     image: pg
     build:
       context: .
-      dockerfile: ./Dockerfile.pg
+      dockerfile: ./docker/postgres/Dockerfile.pg
     volumes:
       - ./.postgresql/data:/var/lib/postgresql/data
     ports:
@@ -48,7 +48,7 @@ services:
     image: neo4j_with_plugins
     build:
       context: .
-      dockerfile: ./Dockerfile.neo4j
+      dockerfile: ./docker/neo4j/Dockerfile.neo4j
     volumes:
       - $HOME/neo4j/data:/data
       - $HOME/neo4j/logs:/logs

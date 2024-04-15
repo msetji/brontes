@@ -15,7 +15,7 @@ RUN touch README.md
 RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
 
 COPY openoperator openoperator
-COPY wait-for-it.sh wait-for-it.sh
+COPY /docker/wait-for-it.sh wait-for-it.sh
 RUN chmod +x wait-for-it.sh
 
 RUN poetry install --without dev
