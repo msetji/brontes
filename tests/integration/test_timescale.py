@@ -1,13 +1,5 @@
-import pytest
 from typing import List
-from openoperator.infrastructure import Timescale, Postgres
 from openoperator.domain.model import PointReading
-
-@pytest.fixture(scope="session")
-def timescale(postgres_container):
-  conn_string = f'postgresql://postgres:postgres@{postgres_container.get_container_host_ip()}:5432/postgres'
-  postgres = Postgres(connection_string=conn_string)
-  return Timescale(postgres)
 
 def test_setup_db(postgres_container, timescale):
   with timescale.postgres.cursor() as cur:

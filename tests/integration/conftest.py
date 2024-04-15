@@ -3,7 +3,7 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 import time
 
-from openoperator.infrastructure.knowledge_graph import KnowledgeGraph
+from openoperator.infrastructure import KnowledgeGraph, Postgres, Timescale
 
 @pytest.fixture(scope="session")
 def neo4j_container():
@@ -42,3 +42,9 @@ def knowledge_graph(neo4j_container):
     "neo4j_uri": f"bolt://{neo4j_container.get_container_host_ip()}:7687"
   }
   return KnowledgeGraph(**config)
+
+@pytest.fixture(scope="session")
+def timescale(postgres_container):
+  conn_string = f'postgresql://postgres:postgres@{postgres_container.get_container_host_ip()}:5432/postgres'
+  postgres = Postgres(connection_string=conn_string)
+  return Timescale(postgres)
