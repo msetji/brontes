@@ -2,7 +2,7 @@ version: "3.8"
 services:
   open-operator-server:
     container_name: server
-    image: server
+    image: server:latest
     build:
       context: .
       dockerfile: ./docker/Dockerfile.server
@@ -32,7 +32,7 @@ services:
 
   pg:
     container_name: pg
-    image: pg
+    image: pg:latest
     build:
       context: .
       dockerfile: ./docker/postgres/Dockerfile.pg
@@ -45,7 +45,7 @@ services:
 
   neo4j_with_plugins:
     container_name: neo4j_with_plugins
-    image: neo4j_with_plugins
+    image: neo4j_with_plugins:latest
     build:
       context: .
       dockerfile: ./docker/neo4j/Dockerfile.neo4j
