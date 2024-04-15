@@ -31,11 +31,9 @@ The project is organized within a single base directory named openoperator/, whi
 - infrastructure/: Supports the application with database access, external API communication, and other technical capabilities.
 - utils.py: Utility functions used across the application.
 
-## Domain-Driven Design (DDD)
+The project aims to adhere to Domain Drive Design (DDD) principles as closely as possible, structuring the codebase to mirror real-world business scenarios and ensuring it remains aligned with business goals.
 
-The project aims to adhere to DDD principles as closely as possible, structuring the codebase to mirror real-world business scenarios and ensuring it remains aligned with business goals.
-
-For those interested in learning more about DDD and its benefits, here are some resources:
+To learn more about DDD and its benefits, here are some resources:
 
 ["Domain-Driven Design: Tackling Complexity in the Heart of Software"](https://fabiofumarola.github.io/nosql/readingMaterial/Evans03.pdf) by Eric Evans
 ["Implementing Domain-Driven Design"](https://dl.ebooksworld.ir/motoman/AW.Implementing.Domain-Driven.Design.www.EBooksWorld.ir.pdf) by Vaughn Vernon
@@ -48,7 +46,7 @@ For those interested in learning more about DDD and its benefits, here are some 
 - Python
 - [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
-_To make poetry create a virtualenv in the project: poetry config virtualenvs.in-project true_
+  _To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
 
 2. Set the required environment variables:
 
@@ -62,25 +60,25 @@ export API_TOKEN_SECRET=<your api secret key>
 
 3. Start the server
 
-**Using docker containers**:
+   **Using docker containers**:
 
-```sh
-docker compose up -d
-```
+   ```sh
+   docker compose up -d
+   ```
 
-**Using poetry**:
+   **Using poetry**:
 
-```sh
-poetry run server
-```
+   ```sh
+   poetry run server
+   ```
 
 4. View the api docs at: http://localhost:8080/docs
 
 ## Testing
 
-- [Unit Tests](./tests/unit/): Focus on parts of the applicaiton in isolation, primarily domain models and services. These test buisness rules, model validation, and behaviors of services without external dependencies
+- **[Unit Tests](./tests/unit/)**: Focus on parts of the applicaiton in isolation, primarily domain models and services. These test buisness rules, model validation, and behaviors of services without external dependencies
 
-- [Integration Tests](./tests/integration/): To ensure that various parts of the system work together as expected
+- **[Integration Tests](./tests/integration/)**: To ensure that various parts of the system work together as expected
 
   We are using [testcontainers](https://testcontainers.com/) for integration tests. When running locally we need to build some images that will be used:
 
