@@ -1,16 +1,24 @@
-FROM python:3.10-slim
+FROM python:3.11-buster
 
-# Install libpq
 RUN apt-get update && apt-get install -y libpq-dev
 
-WORKDIR /usr/src/app
+RUN pip install poetry==1.4.2
 
-COPY openoperator/ openoperator/
-COPY setup.py setup.py
-COPY README.md README.md
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
 
-RUN python3 -m pip install -e . && \
-    pip install python-dotenv && \
-    rm -rf /root/.cache/pip
+WORKDIR /app
 
-CMD ["python", "openoperator/application/mqtt/mqtt2timescale.py"]
+COPY pyproject.toml poetry.lock ./
+RUN touch README.md
+
+RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
+
+COPY openoperator openoperator
+
+RUN poetry install --without dev
+RUN poetry self add poetry-dotenv-plugin
+
+CMD ["poetry", "run", "-vvv", "mqtt2timescale"]
