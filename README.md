@@ -7,7 +7,7 @@
 
   </h3>
 
-[![Unit Tests](https://github.com/syyclops/open-operator/actions/workflows/test.yml/badge.svg)](https://github.com/syyclops/open-operator/actions/workflows/test.yml)
+[![Tests](https://github.com/syyclops/open-operator/actions/workflows/test.yml/badge.svg)](https://github.com/syyclops/open-operator/actions/workflows/test.yml)
 
 </div>
 
@@ -75,6 +75,17 @@ poetry run server
 ```
 
 4. View the api docs at: http://localhost:8080/docs
+
+## Testing
+
+- [Unit Tests](./tests/unit/): Focus on parts of the applicaiton in isolation, primarily domain models and services. These test buisness rules, model validation, and behaviors of services without external dependencies
+
+- [Integration Tests](./tests/integration/): To ensure that various parts of the system work together as expected
+
+  We are using [testcontainers](https://testcontainers.com/) for integration tests. When running locally we need to build some images that will be used:
+
+  1. Neo4j with apoc and neosemantics plugins: `docker build -f Dockerfile.neo4j -t neo4j_with_plugins .`
+  2. Postgres with timescaledb and vector extensions: `docker build -f Dockerfile.pg -t pg .`
 
 ## Useful Resources
 
