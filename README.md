@@ -87,6 +87,8 @@ poetry run server
   1. Neo4j with apoc and neosemantics plugins: `docker build -f Dockerfile.neo4j -t neo4j_with_plugins .`
   2. Postgres with timescaledb and vector extensions: `docker build -f Dockerfile.pg -t pg .`
 
+- End-to-End: TBD
+
 ## Useful Resources
 
 1. [What is COBie?](https://www.thenbs.com/knowledge/what-is-cobie)

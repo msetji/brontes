@@ -35,5 +35,9 @@ jobs:
         run: poetry install
       - name: "Build neo4j image"
         run: docker build -f Dockerfile.neo4j -t neo4j_with_plugins .
-      - name: Run tests
-        run: poetry run pytest -vv -s
+      - name: "Build the postgres image"
+        run: docker build -f Dockerfile.pg -t pg .
+      - name: Run the unit test
+        run: poetry run pytest/unit -vv -s
+      - name: Run the integration test
+        run: poetry run pytest/integration -vv -s
