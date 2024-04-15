@@ -63,7 +63,7 @@ class PointRepository:
     except Exception as e:
       raise e
   
-  def create_point(self, device: Device, point: Point, brick_class_uri: str | None = None) -> Point:
+  def create_point(self, device: Device, point: Point, brick_class_uri: str | None = None) -> Point | None:
     query = """
       MERGE (d:Device:Resource {uri: $device_uri})
         ON CREATE SET d = $device
@@ -76,7 +76,6 @@ class PointRepository:
     try:
       with self.kg.create_session() as session:
         result = session.run(query, device_uri=device.uri, point=point.model_dump(), brick_class_uri=brick_class_uri, device=device.model_dump()).single()
-        print("RESULT: ", result)
         if result:
           return Point(**result['p'])
         return None
