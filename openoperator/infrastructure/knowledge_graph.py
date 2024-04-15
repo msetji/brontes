@@ -8,18 +8,19 @@ class KnowledgeGraph():
           neo4j_user: str | None = None,
           neo4j_password: str | None = None,        
   ) -> None:
-    # Create the neo4j driver
-    if neo4j_uri is None:
-      neo4j_uri = os.environ['NEO4J_URI']
-    if neo4j_user is None:
-      neo4j_user = os.environ['NEO4J_USER']
-    if neo4j_password is None:
-      neo4j_password = os.environ['NEO4J_PASSWORD']
+    """Initialize the Neo4j driver."""
+    neo4j_uri = neo4j_uri or os.environ['NEO4J_URI']
+    neo4j_user = neo4j_user or os.environ['NEO4J_USER']
+    neo4j_password = neo4j_password or os.environ['NEO4J_PASSWORD']
     
     neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password), max_connection_lifetime=200)
     neo4j_driver.verify_connectivity()
     self.neo4j_driver = neo4j_driver
 
+    self.setup_graph()
+
+  def setup_graph(self):
+    """Initalize the graph with the necessary configuration."""
     namespaces = [
       ("cobie", "http://checksem.u-bourgogne.fr/ontology/cobie24#"),
       ("bacnet", "http://data.ashrae.org/bacnet/#"),
@@ -46,6 +47,14 @@ class KnowledgeGraph():
 
   def create_session(self):
     return self.neo4j_driver.session()
+  
+  def close(self):
+    """Closes the neo4j driver connection."""
+    self.neo4j_driver.close()
+
+  def __del__(self):
+    """Closes the neo4j driver connection when the object is deleted."""
+    self.close()
               
   def import_rdf_data(self, url: str, format: str = "Turtle", inline: bool = False):
     """

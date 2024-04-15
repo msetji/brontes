@@ -5,23 +5,28 @@ from openoperator.domain.model import PointReading
 class Timescale:
   def __init__(self, postgres: Postgres) -> None:
     self.postgres = postgres
-    collection_name = 'timeseries'
+    self.collection_name = 'timeseries'
+    self.setup_db()
+    
+  def setup_db(self):
+    """Make sure the timescaledb extension is enabled, the table and indexes are created"""
     try:
       with self.postgres.cursor() as cur:
         # Create timescaledb extension
         cur.execute('CREATE EXTENSION IF NOT EXISTS timescaledb') 
 
         # Check if timeseries table exists
-        cur.execute(f'SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = \'{collection_name}\')') 
+        cur.execute(f'SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = \'{self.collection_name}\')') 
         if not cur.fetchone()[0]: 
-          cur.execute(f'CREATE TABLE {collection_name} (ts timestamptz NOT NULL, value FLOAT NOT NULL, timeseriesid TEXT NOT NULL)') # Create timeseries table if it doesn't exist
-          cur.execute(f'SELECT create_hypertable(\'{collection_name}\', \'ts\')') # Create hypertable if it doesn't exist
-          cur.execute(f'CREATE INDEX {collection_name}_timeseriesid_ts_idx ON {collection_name} (timeseriesid, ts DESC)') # Create the timeseriesid index if it doesn't exist
+          cur.execute(f'CREATE TABLE {self.collection_name} (ts timestamptz NOT NULL, value FLOAT NOT NULL, timeseriesid TEXT NOT NULL)') # Create timeseries table if it doesn't exist
+          cur.execute(f'SELECT create_hypertable(\'{self.collection_name}\', \'ts\')') # Create hypertable if it doesn't exist
+          cur.execute(f'CREATE INDEX {self.collection_name}_timeseriesid_ts_idx ON {self.collection_name} (timeseriesid, ts DESC)') # Create the timeseriesid index if it doesn't exist
           self.postgres.conn.commit()
     except Exception as e:
       raise e
   
   def get_timeseries(self, timeseriesIds: List[str], start_time: str, end_time: str) -> List[dict]:
+    """Fetch timeseries data given some ids and a start and end time. Times should use ISO format string."""
     ids = ', '.join([f'\'{id}\'' for id in timeseriesIds])
     query = f"SELECT * FROM timeseries WHERE timeseriesid IN ({ids}) AND ts >= %s AND ts <= %s ORDER BY ts ASC"
     try:

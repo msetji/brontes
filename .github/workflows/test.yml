@@ -20,11 +20,24 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          python -m pip install --upgrade pip
-          python3 -m pip install -e .
-          pip install pytest
-      - name: Test with pytest
-        run: |
-          pytest
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - uses: actions/cache@v3
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+      - name: Install the project dependencies
+        run: poetry install
+      - name: "Build neo4j image"
+        run: docker build -f Dockerfile.neo4j -t neo4j_with_plugins .
+      - name: "Build the postgres image"
+        run: docker build -f Dockerfile.pg -t pg .
+      - name: Run the unit test
+        run: poetry run pytest tests/unit -vv -s
+      - name: Run the integration test
+        run: poetry run pytest tests/integration -vv -s
