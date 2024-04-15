@@ -1,7 +1,7 @@
 from openoperator.domain.repository import DocumentRepository
 from openoperator.domain.model import Document, DocumentQuery
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 class TestDocuments(unittest.TestCase):
