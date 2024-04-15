@@ -3,6 +3,8 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 import time
 
+from openoperator.infrastructure.knowledge_graph import KnowledgeGraph
+
 @pytest.fixture(scope="session")
 def neo4j_container():
   neo4j_container = (
@@ -31,3 +33,12 @@ def postgres_container():
       raise e
   yield postgres_container
   postgres_container.stop()
+
+@pytest.fixture(scope="session")
+def knowledge_graph(neo4j_container):
+  config = {
+    "neo4j_user": "neo4j",
+    "neo4j_password": "neo4j-password",
+    "neo4j_uri": f"bolt://{neo4j_container.get_container_host_ip()}:7687"
+  }
+  return KnowledgeGraph(**config)
