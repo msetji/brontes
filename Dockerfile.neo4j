@@ -1,9 +1,8 @@
 FROM neo4j:5.15
 
+# This is needed to work inside git actions
 USER root
-
-RUN chmod -R 777 /data
-
+RUN chmod -R 777 /data 
 USER neo4j
 
 ENV NEO4J_apoc_export_file_enabled=true \

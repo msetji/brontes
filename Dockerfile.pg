@@ -24,6 +24,10 @@ RUN make clean && \
     make OPTFLAGS="" && \
     make install
 
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_DB=postgres
+
 # Copy custom PostgreSQL configuration file
 COPY --chown=postgres:postgres ./postgresql.conf /etc/postgresql/postgresql.conf
 

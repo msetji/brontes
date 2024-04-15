@@ -2,7 +2,6 @@ import unittest
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 from openoperator.infrastructure.knowledge_graph import KnowledgeGraph
-import time
 
 class TestKnowledgeGraph(unittest.TestCase):
   def setUp(self):
@@ -28,9 +27,19 @@ class TestKnowledgeGraph(unittest.TestCase):
   def tearDown(self):
     self.neo4j_container.stop()
 
+  def test_graph_setup(self):
+    """Test if the graph is setup with the correct constraints"""
+    with self.kg.create_session() as session:
+      constraints = session.run("SHOW CONSTRAINTS").data()
+      assert any("n10s_unique_uri" in constraint['name'] for constraint in constraints)
+
+      # Make sure the neosemantics plugin is setup
+      graph_config = session.run("MATCH (n:`_GraphConfig`) RETURN n").data()
+      assert graph_config is not None
+
   def test_create_session(self):
     with self.kg.create_session() as session:
       assert session is not None
-
+  
 if __name__ == '__main__':
     unittest.main()
