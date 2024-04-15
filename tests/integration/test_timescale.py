@@ -7,15 +7,17 @@ from testcontainers.core.waiting_utils import wait_for_logs
 
 class TestTimescale(unittest.TestCase):
   def setUp(self) -> None:
-    postgres_continaer = DockerContainer("pg")
-    postgres_continaer.start()
-    self.postgres_continaer = postgres_continaer
+    postgres_container = DockerContainer("pg").with_exposed_ports(5432).with_bind_ports(5432, 5432)
+    postgres_container.start()
+    self.postgres_continaer = postgres_container
     try:
-      wait_for_logs(postgres_continaer, "listening on IPv4 address", timeout=30)
+      wait_for_logs(postgres_container, "listening on IPv6 address", timeout=30)
     except Exception as e:
-      print(postgres_continaer.get_logs())
+      print(postgres_container.get_logs())
       raise e
-    conn_string = 'postgresql://postgres:postgres@localhost:5432/postgres'
+    ip_address = postgres_container.get_container_host_ip()
+    conn_string = f'postgresql://postgres:postgres@{ip_address}:5432/postgres'
+    print(conn_string)
     self.postgres = Postgres(connection_string=conn_string)
     self.timescale = Timescale(postgres=self.postgres)
 
