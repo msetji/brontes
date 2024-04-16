@@ -1,9 +1,9 @@
 <div align="center">
-  <img height="400" src="./docs/assets/Futuristic%20Robot%20HVAC.png" style="border-radius: 8px;"/>
+  <img height="300" src="./docs/assets/Futuristic%20Robot%20HVAC.png" style="border-radius: 8px;"/>
 
   <h3>
 
-[Documentation](https://syyclops.mintlify.app/getting-started/introduction) | [Examples](/examples) | [Community](https://github.com/syyclops/open-operator/discussions)
+[Documentation](https://syyclops.mintlify.app/getting-started/introduction)
 
   </h3>
 
@@ -42,21 +42,21 @@ To learn more about DDD and its benefits, here are some resources:
 
 1. Prerequisites
 
-- [Docker](https://www.docker.com/get-started/)
-- Python
+- [Python](https://www.python.org/downloads/)
 - [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+- [Docker](https://www.docker.com/get-started/)
 
   _To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
 
 2. Set the required environment variables:
 
-```sh
-cp .env.example .env
-export OPENAI_API_KEY=<your secret key>
-export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
-export AZURE_CONTAINER_NAME=<your azure container name>
-export API_TOKEN_SECRET=<your api secret key>
-```
+   ```sh
+   cp .env.example .env
+   export OPENAI_API_KEY=<your secret key>
+   export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
+   export AZURE_CONTAINER_NAME=<your azure container name>
+   export API_TOKEN_SECRET=<your api secret key>
+   ```
 
 3. Start the server
 

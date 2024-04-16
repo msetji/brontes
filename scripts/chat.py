@@ -10,7 +10,6 @@ from langchain_openai import OpenAIEmbeddings
 import asyncio
 import os
 
-
 async def main():
   # Create the argument parser
   parser = argparse.ArgumentParser()
