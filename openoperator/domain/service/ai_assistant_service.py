@@ -5,8 +5,9 @@ import copy
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage
 from langchain.tools import tool
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
 from langchain import hub
+from langchain_community.utilities.serpapi import SerpAPIWrapper
 
 class AIAssistantService:
   def __init__(self, document_repository: DocumentRepository):
@@ -22,8 +23,15 @@ class AIAssistantService:
       """This tool is useful when you need to lookup information specific to the portfolio or building the user is referring to. It returns more context that will help you answer their question. Provide a query that will be used to search for the information."""
       document_query = DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri)
       return str(self.document_repository.search(document_query))
+    
+    search = SerpAPIWrapper()
+    search_tool = Tool(
+      name="google_search",
+      description="useful for when you need to get information from the web",
+      func=search.run
+    )
 
-    tools = [search_building_information]
+    tools = [search_building_information, search_tool]
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
     agent = create_openai_tools_agent(llm.with_config({"tags": ["agent_llm"]}), tools, self.prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=verbose).with_config(
