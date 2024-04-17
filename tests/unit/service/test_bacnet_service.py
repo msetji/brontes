@@ -1,11 +1,11 @@
-from openoperator.domain.service import BACnetService
+from brontes.domain.service import BACnetService
 import unittest
 from unittest.mock import Mock, patch
 import json
 from rdflib import Namespace, RDF, URIRef, Literal
 
 class TestBACnet(unittest.TestCase):
-  @patch('openoperator.infrastructure.knowledge_graph.KnowledgeGraph')
+  @patch('brontes.infrastructure.knowledge_graph.KnowledgeGraph')
   def setUp(self, mock_knowledge_graph):
     # mock_kg = mock_knowledge_graph.return_value
     self.facility_uri = "https://openoperator.com/exampleCustomer/exampleFacility"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from openoperator.domain.model import COBieSpreadsheet
+from brontes.domain.model import COBieSpreadsheet
 import argparse
 
 parser = argparse.ArgumentParser(description='Validate a COBie spreadsheet')

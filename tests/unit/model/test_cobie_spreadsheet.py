@@ -1,5 +1,5 @@
 import unittest
-from openoperator.domain.model import COBieSpreadsheet
+from brontes.domain.model import COBieSpreadsheet
 from openpyxl import Workbook
 from io import BytesIO
 

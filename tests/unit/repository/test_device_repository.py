@@ -1,9 +1,9 @@
-from openoperator.domain.repository import DeviceRepository
+from brontes.domain.repository import DeviceRepository
 import unittest
 from unittest.mock import Mock, patch
 
 class TestDeviceManager(unittest.TestCase):
-  @patch('openoperator.infrastructure.knowledge_graph.KnowledgeGraph')
+  @patch('brontes.infrastructure.knowledge_graph.KnowledgeGraph')
   def setUp(self, mock_knowledge_graph):
     mock_kg = mock_knowledge_graph.return_value
     self.facility_uri = "https://openoperator.com/exampleCustomer/exampleFacility"
@@ -88,7 +88,7 @@ class TestDeviceManager(unittest.TestCase):
     assert devices[0].uri == "https://openoperator.com/facility/device"
     assert devices[1].device_name == "test_device2"
 
-  @patch('openoperator.domain.repository.device_repository.DeviceRepository.get_devices')
+  @patch('brontes.domain.repository.device_repository.DeviceRepository.get_devices')
   def test_cluster_devices(self, mock_devices):
     mock_devices.return_value = [
       {

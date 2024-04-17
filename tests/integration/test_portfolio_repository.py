@@ -1,5 +1,5 @@
-from openoperator.domain.repository import PortfolioRepository
-from openoperator.domain.model import Portfolio
+from brontes.domain.repository import PortfolioRepository
+from brontes.domain.model import Portfolio
 import pytest
 
 def test_create_portfolio(knowledge_graph):

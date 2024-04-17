@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from openoperator.infrastructure import AzureBlobStore, KnowledgeGraph 
-from openoperator.domain.repository import DocumentRepository
-from openoperator.domain.service import AIAssistantService
+from brontes.infrastructure import AzureBlobStore, KnowledgeGraph 
+from brontes.domain.repository import DocumentRepository
+from brontes.domain.service import AIAssistantService
 import argparse
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_postgres import PGVector

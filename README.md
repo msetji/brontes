@@ -1,29 +1,39 @@
 <div align="center">
-  <img height="400" src="./docs/assets/living_building_1.webp" style="border-radius: 8px;"/>
+  <div>
+  <a href="https://syyclops.com">
+    <p align="center">
+      <img height=150 src="./docs/assets/logo192.png"/>
+    </p>
+  </a>
+</div>
 
-  <h3>
+<h3>
 
-[Documentation](https://syyclops.mintlify.app/getting-started/introduction)
+[Documentation](/docs/)
 
-  </h3>
+</h3>
 
 [![Tests](https://github.com/syyclops/open-operator/actions/workflows/test.yml/badge.svg)](https://github.com/syyclops/open-operator/actions/workflows/test.yml)
 
 </div>
 
-## What is Open Operator?
+---
 
-Bringing buildings to life.
+**Brontes** is a platform to bring buildings to life. It organizes and makes sense of diverse building information.
+
+- Organize and correlate all data sources from the building
+- Talk to your building like its a person
+- Your building can reach out to you when things might be going wrong
 
 ## Demo
 
-_Example chat with a building. You can run with:_ `poetry run scripts/chat.py`
+_Example chat with a building. [See code here](./scripts/chat.py)_
 
 https://github.com/syyclops/open-operator/assets/70538060/e9a833bd-b1e5-4a81-aef5-083f8b163144
 
 ## Project Structure
 
-The project is organized within a single base directory named openoperator/, which contains all the components of the project:
+The project is organized within a single base directory named brontes/, which contains all the components of the project:
 
 - **application/**: Manages API endpoints, orchestrating the flow between the user and domain logic.
 - **domain/**: The core layer where business logic lives. It includes:
@@ -41,39 +51,47 @@ To learn more about DDD and its benefits, here are some resources:
 
 ## Quickstart
 
-1. Prerequisites
+There a few things that are needed to be installed in order to get going
 
-- [Python](https://www.python.org/downloads/)
-- [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
-- [Docker](https://www.docker.com/get-started/)
+1. [Install Docker](https://docs.docker.com/engine/install/)
 
-  _To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
-
-2. Set the required environment variables:
-
-   ```sh
-   cp .env.example .env
-   export OPENAI_API_KEY=<your secret key>
-   export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
-   export AZURE_CONTAINER_NAME=<your azure container name>
-   export API_TOKEN_SECRET=<your api secret key>
+2. ```sh
+   # Install poetry
+   curl -sSL https://install.python-poetry.org | python3 -
    ```
 
-3. Start the server
+### Install brontes
 
-   **Using docker containers**:
+```sh
+# Clone the repo and navigate into the brontes directory
+git clone https://github.com/syyclops/brontes.git
+cd brontes
+poetry install
+```
 
-   ```sh
-   docker compose up -d
-   ```
+### Set the required environment variables
 
-   **Using poetry**:
+_Use .env.example file as a starting point_
 
-   ```sh
-   poetry run server
-   ```
+```sh
+cp .env.example .env
+export OPENAI_API_KEY=<your secret key>
+export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
+export AZURE_CONTAINER_NAME=<your azure container name>
+export API_TOKEN_SECRET=<your api secret key>
+```
 
-4. View the api docs at: http://localhost:8080/docs
+### Build and start the docker containers
+
+_This will start postgres, neo4j, unstructured, and a rest api server_
+
+```sh
+docker compose up -d --build
+```
+
+### View the api swagger docs
+
+[http://localhost:8080/docs](http://localhost:8080/docs)
 
 ## Testing
 
@@ -87,6 +105,8 @@ To learn more about DDD and its benefits, here are some resources:
   2. Postgres with timescaledb and vector extensions: `docker build -f Dockerfile.pg -t pg .`
 
 - End-to-End: TBD
+
+Run all tests: `pytest`
 
 ## Useful Resources
 

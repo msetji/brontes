@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "openoperator"
+name = "brontes"
 version = "0.1.0"
 description = ""
 authors = ["demattosanthony <demattosanthony@gmail.com>"]
@@ -45,5 +45,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-server = "openoperator.application.api.app:start"
-mqtt2timescale = "openoperator.application.mqtt.mqtt2timescale:start"
+server = "brontes.application.api.app:start"
+mqtt2timescale = "brontes.application.mqtt.mqtt2timescale:start"

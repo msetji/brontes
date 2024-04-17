@@ -1,5 +1,5 @@
-from openoperator.domain.repository import PointRepository
-from openoperator.domain.model import Point, Device, PointUpdates
+from brontes.domain.repository import PointRepository
+from brontes.domain.model import Point, Device, PointUpdates
 import pytest
 
 @pytest.fixture(scope="session")

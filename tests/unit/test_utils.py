@@ -1,7 +1,7 @@
 import pytest
 from urllib.parse import quote
 import numpy as np
-from openoperator.utils import split_string_with_limit, create_uri, dbscan_cluster
+from brontes.utils import split_string_with_limit, create_uri, dbscan_cluster
 
 # Mock encoder for testing split_string_with_limit
 class MockEncoder:

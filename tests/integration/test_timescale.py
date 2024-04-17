@@ -1,5 +1,5 @@
 from typing import List
-from openoperator.domain.model import PointReading
+from brontes.domain.model import PointReading
 
 def test_setup_db(postgres_container, timescale):
   with timescale.postgres.cursor() as cur:
