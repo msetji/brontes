@@ -1,5 +1,5 @@
 {
-  "name": "Open Operator",
+  "name": "Syyclops",
   "logo": "/assets/logo192.png",
   "favicon": "/assets/logo192.png",
   "colors": {
@@ -18,20 +18,22 @@
   "topbarLinks": [
     {
       "name": "GitHub",
-      "url": "https://github.com/syyclops/open-operator"
+      "url": "https://github.com/syyclops"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Join Discord",
-    "url": "https://discord.gg/VmfmMfDREU"
-  },
   "navigation": [
     {
       "group": "Getting Started",
       "pages": [
         "getting-started/introduction",
-        "getting-started/quickstart",
-        "getting-started/api-guide"
+        "getting-started/setup"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "reference/api-guide",
+        "reference/glossary"
       ]
     }
   ],
