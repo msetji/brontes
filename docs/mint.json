@@ -21,21 +21,14 @@
       "url": "https://github.com/syyclops/open-operator"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Join Discord",
-    "url": "https://discord.gg/VmfmMfDREU"
-  },
   "navigation": [
     {
       "group": "Getting Started",
       "pages": [
         "getting-started/introduction",
-        "getting-started/quickstart",
+        "getting-started/setup",
         "getting-started/api-guide"
       ]
     }
-  ],
-  "openapi": [
-    "https://open-operator-server-beta.azurewebsites.net/openapi.json"
   ]
 }

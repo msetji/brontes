@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="300" src="./docs/assets/Futuristic%20Robot%20HVAC.png" style="border-radius: 8px;"/>
+  <img height="400" src="./docs/assets/living_building_1.webp" style="border-radius: 8px;"/>
 
   <h3>
 
@@ -13,9 +13,11 @@
 
 ## What is Open Operator?
 
-Open Operator is a system that organizes and makes sense of the diverse operational data from buildings while adding a layer of analytics and engineering knowledge intelligence.
+Bringing buildings to life.
 
 ## Demo
+
+_Example chat with a building. You can run with:_ `poetry run scripts/chat.py`
 
 https://github.com/syyclops/open-operator/assets/70538060/e9a833bd-b1e5-4a81-aef5-083f8b163144
 

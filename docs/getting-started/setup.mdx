@@ -1,0 +1,48 @@
+---
+title: Setup
+description: Get up and running locally on your computer
+---
+
+## Prerequisites
+
+There a few things that are needed to be installed in order to get going
+
+1. [Install Docker](https://docs.docker.com/engine/install/)
+
+2. ```sh
+   # Install poetry
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+## Install open operator
+
+```sh
+# Clone the repo and navigate into the open-operator directory
+git clone https://github.com/syyclops/open-operator.git
+cd open-operator
+poetry install
+```
+
+## Set the required environment variables
+
+_Use .env.example file as a starting point_
+
+```sh
+cp .env.example .env
+export OPENAI_API_KEY=<your secret key>
+export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
+export AZURE_CONTAINER_NAME=<your azure container name>
+export API_TOKEN_SECRET=<your api secret key>
+```
+
+## Build and start the docker containers
+
+_This will start postgres, neo4j, unstructured, and a rest api server_
+
+```sh
+docker compose up -d --build
+```
+
+## View the api swagger docs
+
+[http://localhost:8080/docs](http://localhost:8080/docs)
