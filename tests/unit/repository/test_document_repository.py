@@ -1,5 +1,5 @@
-from openoperator.domain.repository import DocumentRepository
-from openoperator.domain.model import Document, DocumentQuery
+from brontes.domain.repository import DocumentRepository
+from brontes.domain.model import Document, DocumentQuery
 import unittest
 from unittest.mock import Mock, patch
 from uuid import uuid4
@@ -77,7 +77,7 @@ class TestDocuments(unittest.TestCase):
 
     # Execute the upload method
     mock_uuid = uuid4()
-    with patch('openoperator.domain.repository.document_repository.uuid4', return_value=mock_uuid):
+    with patch('brontes.domain.repository.document_repository.uuid4', return_value=mock_uuid):
       result_document = self.document_repository.upload(facility_uri=self.facility_uri, file_content=file_content, file_name=file_name, file_type=file_type, discipline=discipline)
     expected_document = Document(extractionStatus="pending", name=file_name, uri=f"{self.facility_uri}/document/{str(mock_uuid)}", url=file_url, thumbnailUrl=None, discipline=None)
   
@@ -112,7 +112,7 @@ class TestDocuments(unittest.TestCase):
 
     # Mock fitz.open and execute the upload method
     mock_uuid = uuid4()
-    with patch('openoperator.domain.repository.document_repository.fitz.open', return_value=fitz_mock), patch('openoperator.domain.repository.document_repository.uuid4', return_value=mock_uuid):
+    with patch('brontes.domain.repository.document_repository.fitz.open', return_value=fitz_mock), patch('brontes.domain.repository.document_repository.uuid4', return_value=mock_uuid):
       result_document = self.document_repository.upload(facility_uri=self.facility_uri, file_content=file_content, file_name=file_name, file_type=file_type, discipline=None)
     expected_result = Document(extractionStatus="pending", name=file_name, uri=f"{self.facility_uri}/document/{str(mock_uuid)}", url=file_url, thumbnailUrl=thumbnail_url, discipline=None)
 

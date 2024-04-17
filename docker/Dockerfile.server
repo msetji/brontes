@@ -39,7 +39,7 @@ COPY --from=builder /app /app
 WORKDIR /app
 
 # Copy the application code and the wait-for-it script
-COPY openoperator openoperator
+COPY brontes brontes
 COPY docker/wait-for-it.sh wait-for-it.sh
 
 # Make the script executable
