@@ -1,5 +1,5 @@
 {
-  "name": "Syyclops",
+  "name": "Open Operator",
   "logo": "/assets/logo192.png",
   "favicon": "/assets/logo192.png",
   "colors": {
@@ -18,7 +18,7 @@
   "topbarLinks": [
     {
       "name": "GitHub",
-      "url": "https://github.com/syyclops"
+      "url": "https://github.com/syyclops/open-operator"
     }
   ],
   "navigation": [
@@ -26,18 +26,9 @@
       "group": "Getting Started",
       "pages": [
         "getting-started/introduction",
-        "getting-started/setup"
-      ]
-    },
-    {
-      "group": "Reference",
-      "pages": [
-        "reference/api-guide",
-        "reference/glossary"
+        "getting-started/setup",
+        "getting-started/api-guide"
       ]
     }
-  ],
-  "openapi": [
-    "https://open-operator-server-beta.azurewebsites.net/openapi.json"
   ]
 }
