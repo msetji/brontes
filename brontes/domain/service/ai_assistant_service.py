@@ -19,8 +19,8 @@ class AIAssistantService:
     self.postgres = postgres
 
     # Create the table schema (only needs to be done once)
-    table_name = "chat_history"
-    PostgresChatMessageHistory.create_tables(postgres.conn, table_name)
+    self.chat_history_table_name = "chat_history"
+    PostgresChatMessageHistory.create_tables(postgres.conn, self.chat_history_table_name)
 
     self.prompt = ChatPromptTemplate.from_messages([
       ("system", """You are now a digital twin. Depending on the context given you may represent a portfolio, facility, system or equipment. As a digital twin your responses should reflect the context. Users should feel like they are speaking directly to their building or portfolio. Don't call yourself a digital twin, instead embody the role and provide the best possible answers to the user's questions. Talk about yourself and answer questions in the first person, as if you were the building or portfolio.
@@ -38,7 +38,7 @@ Portfolio context: {portfolio_context}"""),
   async def chat(self, session_id: str, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
     # Initialize the chat history manager
     chat_history = PostgresChatMessageHistory(
-        "chat_history",
+        self.chat_history_table_name,
         session_id,
         sync_connection=self.postgres.conn
     )

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from typing import List, Generator, Literal
-from typing_extensions import TypedDict
 import mimetypes
 import os
 import jwt
@@ -13,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 
 from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
 from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
@@ -111,6 +109,7 @@ async def chat(
   document_uri: str | None = None,
   current_user: User = Security(get_current_user)
 ) -> StreamingResponse:
+  """Session id must be a valid uuid string"""
   if document_uri and not facility_uri:
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
   
