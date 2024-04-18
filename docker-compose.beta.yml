@@ -1,7 +1,9 @@
 version: "3.8"
 
 services:
-  open-operator-server:
+  brontes-server:
+    container_name: server
+    image: server:latest
     build:
       context: .
       dockerfile: ./docker/Dockerfile.server
