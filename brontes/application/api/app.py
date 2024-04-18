@@ -55,7 +55,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository)
+ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Brontes API")

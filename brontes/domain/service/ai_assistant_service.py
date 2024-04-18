@@ -1,4 +1,4 @@
-from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository
+from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.model import DocumentQuery, User
 from typing import List, Generator
 import hashlib
@@ -10,11 +10,12 @@ from langchain_community.utilities.serpapi import SerpAPIWrapper
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, ToolMessage
 
 class AIAssistantService:
-  def __init__(self, document_repository: DocumentRepository, portfolio_repository: PortfolioRepository, ai_repository: AIRepository):
+  def __init__(self, document_repository: DocumentRepository, portfolio_repository: PortfolioRepository, facility_repository: FacilityRepository, ai_repository: AIRepository):
     self.document_repository = document_repository
     self.portfolio_repository = portfolio_repository
     self.vector_store = document_repository.vector_store
     self.ai_repository = ai_repository
+    self.facility_repository = facility_repository
 
     self.prompt = ChatPromptTemplate.from_messages([
       ("system", """You are now a digital twin. Depending on the context given you may represent a portfolio, facility, system or equipment. As a digital twin your responses should reflect the context. Users should feel like they are speaking directly to their building or portfolio. Don't call yourself a digital twin, instead embody the role and provide the best possible answers to the user's questions. Talk about yourself and answer questions in the first person, as if you were the building or portfolio.
@@ -51,8 +52,12 @@ Portfolio context: {portfolio_context}"""),
       func=search.run
     )
 
-    user_context = str(user.model_dump())
+    user_context = user.full_name
     portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
+
+    if facility_uri:
+      self.prompt.messages[0] += "\n\nCurrent Facility Context: {facility_context}"
+      facility_context = str(self.facility_repository.get_facility(facility_uri=facility_uri).model_dump())
 
     tools = [search_building_information, search_tool]
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
@@ -71,6 +76,7 @@ Portfolio context: {portfolio_context}"""),
       "chat_history": chat_history.messages,
       "user_context": user_context,
       "portfolio_context": portfolio_context,
+      "facility_context": facility_context if facility_uri else None
     }, version="v1"):
       kind = event["event"]
       if kind == "on_chain_start":
