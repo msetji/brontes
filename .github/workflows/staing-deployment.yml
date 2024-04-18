@@ -2,10 +2,6 @@ on:
   push:
     branches:
       - staging
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - staging
 name: Staging Deploy
 
 jobs:
@@ -27,5 +23,5 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       - run: |
-          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/open-operator:beta -f docker/Dockerfile.server
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/open-operator:beta
+          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/brontes:staging -f docker/Dockerfile.server
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/brontes:staging
