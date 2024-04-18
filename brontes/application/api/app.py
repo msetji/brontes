@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from typing import List, Generator, Literal
-from typing_extensions import TypedDict
 import mimetypes
 import os
 import jwt
@@ -13,19 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
-from langchain_core.messages import AIMessage, SystemMessage, HumanMessage, BaseMessage
 
 from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
-from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
+from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository, AIRepository
 from brontes.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from brontes.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, DeviceCreateParams
-
-# System prompt for the AI Assistant
-llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
-Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.
-Your answer should be as short and concise as possible while still being informative.
-You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
-Use the search information tool when necessary to get more context to answer the question, and always provide your sources in markdown formatting."""
 
 # Infrastructure/External Services
 ## Langchain
@@ -52,6 +43,7 @@ document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_sto
 cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
 device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
+ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
 
 # Services
 base_uri = "https://syyclops.com/"
@@ -63,7 +55,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(document_repository=document_repository)
+ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Brontes API")
@@ -111,25 +103,26 @@ async def login(email: str, password: str) -> JSONResponse:
 ## AI ROUTES
 @app.post("/chat", tags=["AI"], response_model=Generator[str, None, None])
 async def chat(
-  messages: list[
-    TypedDict("Message", {"content": str, "role": Literal[ "user", "assistant"]})
-  ],
+  input: str,
+  session_id: str,
   portfolio_uri: str,
   facility_uri: str | None = None,
   document_uri: str | None = None,
   current_user: User = Security(get_current_user)
 ) -> StreamingResponse:
+  """Session id must be a valid uuid string"""
   if document_uri and not facility_uri:
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
   
-  messages: List[BaseMessage] = [HumanMessage(content=message["content"]) if message["role"] == "user" else AIMessage(content=message["content"]) for message in messages]
-  messages.insert(0, SystemMessage(content=llm_system_prompt))
-
   async def event_stream() -> Generator[str, None, None]:
-    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+    async for chunk in ai_assistant_service.chat(user=current_user, session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
       yield f"event: message\ndata: {chunk}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.get("/chat/sessions", tags=["AI"])
+async def get_chat_sessions(current_user: User = Security(get_current_user)) -> JSONResponse:
+  return JSONResponse(ai_assistant_service.get_user_chat_session_history(current_user))
 
 @app.post("/transcribe", tags=["AI"], response_model=str)
 async def transcribe_audio(

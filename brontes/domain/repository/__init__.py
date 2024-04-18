@@ -5,3 +5,4 @@ from .document_repository import DocumentRepository
 from .cobie_repository import COBieRepository
 from .device_repository import DeviceRepository
 from .point_repository import PointRepository
+from .ai_repository import AIRepository

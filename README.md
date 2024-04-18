@@ -69,6 +69,8 @@ cd brontes
 poetry install
 ```
 
+_To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
+
 ### Set the required environment variables
 
 _Use .env.example file as a starting point_

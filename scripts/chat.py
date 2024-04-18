@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-from brontes.infrastructure import AzureBlobStore, KnowledgeGraph 
-from brontes.domain.repository import DocumentRepository
+from brontes.infrastructure import AzureBlobStore, KnowledgeGraph, Postgres
+from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.service import AIAssistantService
+from brontes.domain.model import User
 import argparse
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 import asyncio
 import os
+import uuid
 
 async def main():
   # Create the argument parser
@@ -19,13 +20,8 @@ async def main():
   verbose = args.verbose
   portfolio_uri = args.portfolio_uri
 
-  llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
-  Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.
-  Your answer should be as short and concise as possible while still being informative.
-  You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
-  Use the search information tool when necessary to get more context to answer the question, and always provide your sources in markdown formatting."""
-
   # Infrastructure
+  postgres = Postgres()
   knowledge_graph = KnowledgeGraph()
   blob_store = AzureBlobStore()
   embeddings = OpenAIEmbeddings()
@@ -36,15 +32,19 @@ async def main():
     use_jsonb=True
   )
 
+  example_user = User(email="example@example.com", full_name="Example User", hashed_password="")
+
   # Repositories
   document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
-
+  portfolio_repository = PortfolioRepository(kg=knowledge_graph)
+  ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
+  facility_repository = FacilityRepository(kg=knowledge_graph)
+  
   # Services
-  ai_assistant_service = AIAssistantService(document_repository=document_repository)
+  ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
 
-  messages = [
-    SystemMessage(content=llm_system_prompt)
-  ]
+  session_id = str(uuid.uuid4())
+  print(f"Session ID: {session_id}")
 
   while True:
     # Get input from user
@@ -54,14 +54,10 @@ async def main():
     if user_input == "exit":
       break
 
-    messages.append(HumanMessage(content=user_input))
-
     content = ""
-    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, verbose=verbose):
+    async for chunk in ai_assistant_service.chat(user=example_user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose):
       print(chunk, end="", flush=True)
       content += chunk
-
-    messages.append(AIMessage(content=content))
 
     print()
 
