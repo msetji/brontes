@@ -46,8 +46,7 @@ device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
 ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
 
 # Services
-base_uri = "https://syyclops.com/"
-portfolio_service = PortfolioService(portfolio_repository=portfolio_repository, base_uri=base_uri)
+portfolio_service = PortfolioService(portfolio_repository=portfolio_repository)
 user_service = UserService(user_repository=user_repository)
 facility_service = FacilityService(facility_repository=facility_repository)
 document_service = DocumentService(document_repository=document_repository)

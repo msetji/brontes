@@ -3,7 +3,7 @@ from brontes.domain.model import Portfolio
 from brontes.utils import create_uri
 
 class PortfolioService:
-  def __init__(self, portfolio_repository: PortfolioRepository, base_uri: str):
+  def __init__(self, portfolio_repository: PortfolioRepository, base_uri: str = "https://syyclops.com/"):
     self.portfolio_repository = portfolio_repository
     self.base_uri = base_uri
 
