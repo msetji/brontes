@@ -14,7 +14,7 @@ from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 
 from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
-from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository
+from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository, AIRepository
 from brontes.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
 from brontes.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, DeviceCreateParams
 
@@ -43,6 +43,7 @@ document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_sto
 cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
 device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
+ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
 
 # Services
 base_uri = "https://syyclops.com/"
@@ -54,7 +55,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, postgres=postgres)
+ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Brontes API")
@@ -114,10 +115,14 @@ async def chat(
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
   
   async def event_stream() -> Generator[str, None, None]:
-    async for chunk in ai_assistant_service.chat(session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+    async for chunk in ai_assistant_service.chat(user=current_user, session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
       yield f"event: message\ndata: {chunk}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.get("/chat/sessions", tags=["AI"])
+async def get_chat_sessions(current_user: User = Security(get_current_user)) -> JSONResponse:
+  return JSONResponse(ai_assistant_service.get_user_chat_session_history(current_user))
 
 @app.post("/transcribe", tags=["AI"], response_model=str)
 async def transcribe_audio(

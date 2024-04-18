@@ -1,10 +1,8 @@
-from brontes.domain.repository import DocumentRepository, PortfolioRepository
-from brontes.infrastructure import Postgres
-from brontes.domain.model import DocumentQuery
+from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository
+from brontes.domain.model import DocumentQuery, User
 from typing import List, Generator
 import hashlib
 from langchain_openai import ChatOpenAI
-from langchain_postgres import PostgresChatMessageHistory
 from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain.tools import tool
 from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
@@ -12,15 +10,11 @@ from langchain_community.utilities.serpapi import SerpAPIWrapper
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, ToolMessage
 
 class AIAssistantService:
-  def __init__(self, document_repository: DocumentRepository, portfolio_repository: PortfolioRepository, postgres: Postgres):
+  def __init__(self, document_repository: DocumentRepository, portfolio_repository: PortfolioRepository, ai_repository: AIRepository):
     self.document_repository = document_repository
     self.portfolio_repository = portfolio_repository
     self.vector_store = document_repository.vector_store
-    self.postgres = postgres
-
-    # Create the table schema (only needs to be done once)
-    self.chat_history_table_name = "chat_history"
-    PostgresChatMessageHistory.create_tables(postgres.conn, self.chat_history_table_name)
+    self.ai_repository = ai_repository
 
     self.prompt = ChatPromptTemplate.from_messages([
       ("system", """You are now a digital twin. Depending on the context given you may represent a portfolio, facility, system or equipment. As a digital twin your responses should reflect the context. Users should feel like they are speaking directly to their building or portfolio. Don't call yourself a digital twin, instead embody the role and provide the best possible answers to the user's questions. Talk about yourself and answer questions in the first person, as if you were the building or portfolio.
@@ -29,19 +23,20 @@ Your answer should be as short and concise as possible while still being informa
 You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
 You use tools when necessary to help you answer the question, and always provide your sources in markdown formatting.
        
+User context (The user you are speaking to): {user_context}
 Portfolio context: {portfolio_context}"""),
       MessagesPlaceholder("chat_history"),
       ("human", "{input}"),
       MessagesPlaceholder("agent_scratchpad")
     ])
+
+  def get_user_chat_session_history(self, user: User) -> List[str]:
+    """Get all chat sessions for the given user."""
+    return self.ai_repository.get_chat_sessions(user.email)
   
-  async def chat(self, session_id: str, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
+  async def chat(self, session_id: str, user: User, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
     # Initialize the chat history manager
-    chat_history = PostgresChatMessageHistory(
-        self.chat_history_table_name,
-        session_id,
-        sync_connection=self.postgres.conn
-    )
+    chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
 
     @tool
     def search_building_information(query: str):
@@ -56,6 +51,7 @@ Portfolio context: {portfolio_context}"""),
       func=search.run
     ) 
 
+    user_context = str(user.model_dump())
     portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
 
     tools = [search_building_information, search_tool]
@@ -73,6 +69,7 @@ Portfolio context: {portfolio_context}"""),
     async for event in agent_executor.astream_events({
       "input": input,
       "chat_history": chat_history.messages,
+      "user_context": user_context,
       "portfolio_context": portfolio_context,
     }, version="v1"):
       kind = event["event"]
