@@ -49,7 +49,7 @@ Portfolio context: {portfolio_context}"""),
       name="google_search",
       description="useful for when you need to get information from the web",
       func=search.run
-    ) 
+    )
 
     user_context = str(user.model_dump())
     portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
