@@ -56,7 +56,7 @@ cobie_service = COBieService(cobie_repository=cobie_repository)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
 bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository)
+ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, postgres=postgres)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Brontes API")
@@ -104,9 +104,8 @@ async def login(email: str, password: str) -> JSONResponse:
 ## AI ROUTES
 @app.post("/chat", tags=["AI"], response_model=Generator[str, None, None])
 async def chat(
-  messages: list[
-    TypedDict("Message", {"content": str, "role": Literal[ "user", "assistant"]})
-  ],
+  input: str,
+  session_id: str,
   portfolio_uri: str,
   facility_uri: str | None = None,
   document_uri: str | None = None,
@@ -115,10 +114,8 @@ async def chat(
   if document_uri and not facility_uri:
     raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
   
-  messages: List[BaseMessage] = [HumanMessage(content=message["content"]) if message["role"] == "user" else AIMessage(content=message["content"]) for message in messages]
-
   async def event_stream() -> Generator[str, None, None]:
-    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+    async for chunk in ai_assistant_service.chat(session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
       yield f"event: message\ndata: {chunk}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")

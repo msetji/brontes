@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-from brontes.infrastructure import AzureBlobStore, KnowledgeGraph 
+from brontes.infrastructure import AzureBlobStore, KnowledgeGraph, Postgres
 from brontes.domain.repository import DocumentRepository, PortfolioRepository
 from brontes.domain.service import AIAssistantService
 import argparse
-from langchain_core.messages import HumanMessage, AIMessage
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 import asyncio
 import os
+import uuid
 
 async def main():
   # Create the argument parser
@@ -20,6 +20,7 @@ async def main():
   portfolio_uri = args.portfolio_uri
 
   # Infrastructure
+  postgres = Postgres()
   knowledge_graph = KnowledgeGraph()
   blob_store = AzureBlobStore()
   embeddings = OpenAIEmbeddings()
@@ -35,9 +36,11 @@ async def main():
   portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 
   # Services
-  ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository)
+  ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, postgres=postgres)
 
-  messages = []
+
+  session_id = str(uuid.uuid4())
+  print(f"Session ID: {session_id}")
 
   while True:
     # Get input from user
@@ -47,14 +50,10 @@ async def main():
     if user_input == "exit":
       break
 
-    messages.append(HumanMessage(content=user_input))
-
     content = ""
-    async for chunk in ai_assistant_service.chat(portfolio_uri=portfolio_uri, messages=messages, verbose=verbose):
+    async for chunk in ai_assistant_service.chat(session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose):
       print(chunk, end="", flush=True)
       content += chunk
-
-    messages.append(AIMessage(content=content))
 
     print()
 
