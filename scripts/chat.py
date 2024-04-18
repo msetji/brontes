@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from brontes.infrastructure import AzureBlobStore, KnowledgeGraph 
-from brontes.domain.repository import DocumentRepository
+from brontes.domain.repository import DocumentRepository, PortfolioRepository
 from brontes.domain.service import AIAssistantService
 import argparse
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 import asyncio
@@ -19,12 +19,6 @@ async def main():
   verbose = args.verbose
   portfolio_uri = args.portfolio_uri
 
-  llm_system_prompt = """You are an an AI Assistant that specializes in building operations and maintenance.
-  Your goal is to help facility owners, managers, and operators manage their facilities and buildings more efficiently.
-  Your answer should be as short and concise as possible while still being informative.
-  You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
-  Use the search information tool when necessary to get more context to answer the question, and always provide your sources in markdown formatting."""
-
   # Infrastructure
   knowledge_graph = KnowledgeGraph()
   blob_store = AzureBlobStore()
@@ -38,13 +32,12 @@ async def main():
 
   # Repositories
   document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
+  portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 
   # Services
-  ai_assistant_service = AIAssistantService(document_repository=document_repository)
+  ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository)
 
-  messages = [
-    SystemMessage(content=llm_system_prompt)
-  ]
+  messages = []
 
   while True:
     # Get input from user

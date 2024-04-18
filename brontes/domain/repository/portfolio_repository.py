@@ -8,11 +8,14 @@ class PortfolioRepository:
 
   def get_portfolio(self, portfolio_uri: str) -> Portfolio:
     with self.kg.create_session() as session:
-      result = session.run("MATCH (p:Customer {uri: $uri}) RETURN p", uri=portfolio_uri)
-      data = result.data()
-      if len(data) == 0:
+      result = session.run("MATCH (p:Customer {uri: $uri}) MATCH (p)-[:HAS_FACILITY]->(f:Facility) with p, collect(f) as facilities RETURN p as portfolio, facilities", uri=portfolio_uri)
+      data = result.single()
+      if data is None:
         raise ValueError(f"Portfolio {portfolio_uri} not found")
-      return Portfolio(uri=data[0]['uri'], name=data[0]['name'])
+      portfolio = Portfolio(uri=data['portfolio']['uri'], name=data['portfolio']['name'])
+      facilities = [Facility(**facility) for facility in data['facilities']]
+      portfolio.facilities = facilities
+      return portfolio
     
   def create_portfolio(self, portfolio: Portfolio, user_email: str) -> Portfolio:
     with self.kg.create_session() as session:
