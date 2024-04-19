@@ -4,6 +4,7 @@ from typing import List, Generator, Literal
 import mimetypes
 import os
 import jwt
+import json
 from io import BytesIO
 from fastapi import FastAPI, UploadFile, Depends, Security, HTTPException, BackgroundTasks
 from fastapi.responses import Response, JSONResponse, StreamingResponse
@@ -115,7 +116,7 @@ async def chat(
   
   async def event_stream() -> Generator[str, None, None]:
     async for chunk in ai_assistant_service.chat(user=current_user, session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
-      yield f"event: message\ndata: {chunk}\n\n"
+      yield f"event: message\ndata: {json.dumps({'chunk': chunk})}\n\n"
 
   return StreamingResponse(event_stream(), media_type="text/event-stream")
 

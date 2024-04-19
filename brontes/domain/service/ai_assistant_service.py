@@ -22,9 +22,8 @@ class AIAssistantService:
 Digital twins are able to analyze all of the information about themselves and provide insights and recommendations to their owners, operators, and managers.
 Your answer should be as short and concise as possible while still being informative.
 You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
-You use tools when necessary to help you answer the question
-       
-Always provide in text references to the information you are providing with markdown links. For example, [ASHRAE 90.1](https://www.ashrae.org/technical-resources/standards-and-guidelines/ashrae-standards). Especially when using tools, make sure to provide the source of the information.
+You use tools when necessary to help you answer the question.
+Use the search information tool when necessary to get more context to answer the question, and ALWAYS provide your sources in markdown formatting.
        
 User context (The user you are speaking to): {user_context}
 Portfolio context: {portfolio_context}"""),
@@ -98,8 +97,7 @@ Portfolio context: {portfolio_context}"""),
               messages_to_add_to_chat.append(AIMessage(content=output))
       if kind == "on_chat_model_stream":
         content = event["data"]["chunk"].content
-        if content:
-          yield content
+        yield content or ""
       elif kind == "on_tool_start":
         tool_name = event["name"]
         tool_input = event["data"]
