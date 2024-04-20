@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# To run with different env file: POETRY_DOTENV_LOCATION=.env.beta poetry run scripts/chat.py 
+
 from brontes.infrastructure import AzureBlobStore, KnowledgeGraph, Postgres
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.service import AIAssistantService
@@ -15,10 +17,14 @@ async def main():
   # Create the argument parser
   parser = argparse.ArgumentParser()
   parser.add_argument('--portfolio_uri', type=str, help='The portfolio ID to use for the chat', default="https://syyclops.com/example")
+  parser.add_argument('--email', type=str, help='The email of the user to chat with', default="example@example.com")
   parser.add_argument('--verbose', type=bool, default=False, help='Print verbose output') 
   args = parser.parse_args()
   verbose = args.verbose
   portfolio_uri = args.portfolio_uri
+  email = args.email
+
+  user = User(email=email, full_name="", hashed_password="")
 
   # Infrastructure
   postgres = Postgres()
@@ -31,8 +37,6 @@ async def main():
     embeddings=embeddings,
     use_jsonb=True
   )
-
-  example_user = User(email="example@example.com", full_name="Example User", hashed_password="")
 
   # Repositories
   document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
@@ -55,7 +59,7 @@ async def main():
       break
 
     content = ""
-    async for chunk in ai_assistant_service.chat(user=example_user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose):
+    async for chunk in ai_assistant_service.chat(user=user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose):
       print(chunk, end="", flush=True)
       content += chunk
 
