@@ -1,13 +1,13 @@
+from typing import List, Generator
+import os
+import ast
+from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from langchain_core.messages import AIMessage, HumanMessage
+
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.model import DocumentQuery, User
-from typing import List, Generator
-import hashlib
-from langchain_openai import ChatOpenAI
-from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
-from langchain.tools import tool
-from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
-from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, ToolMessage
 
 class AIAssistantService:
   def __init__(self, document_repository: DocumentRepository, portfolio_repository: PortfolioRepository, facility_repository: FacilityRepository, ai_repository: AIRepository):
@@ -17,19 +17,18 @@ class AIAssistantService:
     self.ai_repository = ai_repository
     self.facility_repository = facility_repository
 
-    self.prompt = ChatPromptTemplate.from_messages([
-      ("system", """You are now a digital twin. Depending on the context given you may represent a portfolio, facility, system or equipment. As a digital twin your responses should reflect the context. Users should feel like they are speaking directly to their building or portfolio. Don't call yourself a digital twin, instead embody the role and provide the best possible answers to the user's questions. Talk about yourself and answer questions in the first person, as if you were the building or portfolio.
+    self.chat_template = ChatPromptTemplate.from_messages([
+      ("system", """You are now a digital twin. Depending on the context given you may represent a portfolio, facility, system or equipment. Users should feel like they are speaking directly to their building or portfolio. Embody the role and provide the best possible answers to the user's questions.
 Digital twins are able to analyze all of the information about themselves and provide insights and recommendations to their owners, operators, and managers.
-Your answer should be as short and concise as possible while still being informative.
-You are an ASHRAE expert and always try to follow the ASHRAE guidelines.
-You use tools when necessary to help you answer the question.
-Use the search information tool when necessary to get more context to answer the question, and ALWAYS provide your sources in markdown formatting.
+Answer the questions concisely and accurately. If you don't know the answer then don't make anything up.
+Answer in a short paragraph or two.
+Provide inline citations when you pull information from documents context.
+Follow ASHRAE guidelines and best practices when providing answers.
        
-User context (The user you are speaking to): {user_context}
-Portfolio context: {portfolio_context}"""),
+Context about the user you are spearking with: {user_context}
+Context about a portfolio the user has access to: {portfolio_context}"""),
       MessagesPlaceholder("chat_history"),
-      ("human", "{input}"),
-      MessagesPlaceholder("agent_scratchpad")
+      ("human", "{input}")
     ])
 
   def get_user_chat_session_history(self, user: User) -> List[str]:
@@ -38,21 +37,6 @@ Portfolio context: {portfolio_context}"""),
   
   async def chat(self, session_id: str, user: User, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
     # Initialize the chat history manager
-    chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
-
-    @tool
-    def search_building_information(query: str):
-      """This tool is useful when you need to lookup information specific to the portfolio or building the user is referring to. It returns more context that will help you answer their question. Provide a query that will be used to search for the information."""
-      document_query = DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri)
-      return str(self.document_repository.search(document_query))
-    
-    search = SerpAPIWrapper()
-    search_tool = Tool(
-      name="google_search",
-      description="useful for when you need to get information from the web",
-      func=search.run
-    )
-
     user_context = user.full_name
     portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
 
@@ -60,63 +44,75 @@ Portfolio context: {portfolio_context}"""),
       self.prompt.messages[0] += "\n\nCurrent Facility Context: {facility_context}"
       facility_context = str(self.facility_repository.get_facility(facility_uri=facility_uri).model_dump())
 
-    tools = [search_building_information, search_tool]
-    llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, streaming=True)
-    agent = create_openai_tools_agent(llm, tools, self.prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=verbose).with_config(
-      {"run_name": "Agent"}
-    )
+    chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
 
-    # Create a list of messages to store in the chat history
-    messages_to_add_to_chat: List[BaseMessage] = [
-      HumanMessage(content=input)
-    ]
+    chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-70b-8192")
 
-    async for event in agent_executor.astream_events({
-      "input": input,
-      "chat_history": chat_history.messages,
-      "user_context": user_context,
-      "portfolio_context": portfolio_context,
-      "facility_context": facility_context if facility_uri else None
-    }, version="v1"):
-      kind = event["event"]
-      if kind == "on_chain_start":
-        if (
-            event["name"] == "Agent"
-        ):  # Was assigned when creating the agent with `.with_config({"run_name": "Agent"})`
-          pass
-            # print(
-            #     f"Starting agent: {event['name']} with input: {event['data'].get('input')}"
-            # )
-      elif kind == "on_chain_end":
-        if (
-            event["name"] == "Agent"
-        ):  # Was assigned when creating the agent with `.with_config({"run_name": "Agent"})`
-            output = event["data"].get("output")['output']
-            if output:
-              messages_to_add_to_chat.append(AIMessage(content=output))
-      if kind == "on_chat_model_stream":
-        content = event["data"]["chunk"].content
-        yield content or ""
-      elif kind == "on_tool_start":
-        tool_name = event["name"]
-        tool_input = event["data"]
-        tool_id = event["run_id"]
-        tool_id = hashlib.sha256(tool_id.encode()).hexdigest()[:10]
-        messages_to_add_to_chat.append(
-          AIMessage(content="", tool_calls=[
-            {"name": tool_name, "args": tool_input, "id": tool_id}
-          ])
-        )
+    search_for_info_prompt = ChatPromptTemplate.from_messages([
+      ("system", """Given a chat history between an ai and a user, analyze the question and determine if the ai should search for information in the building's documents. If the ai should search for information then return yes otherwise return no. Only Response with yes or no"""),
+      ("human", "Chat History: {chat_history}\n\nAnalyze this message history and determine if the AI should search for information in the building's documents.")
+    ])
+    chain = search_for_info_prompt | chat
+    response = chain.invoke({
+      "chat_history": str([message.json() for message in chat_history.messages] + [HumanMessage(input).json()])
+    })
+    search_for_info = response.content
+    print("Search for info?")
+    print(search_for_info)
 
-      elif kind == "on_tool_end":
-        tool_name = event["name"]
-        tool_output = event["data"].get("output")
-        tool_id = event["run_id"]
-        tool_id = hashlib.sha256(tool_id.encode()).hexdigest()[:10]
-        messages_to_add_to_chat.append(
-          ToolMessage(content=tool_output, tool_call_id=tool_id)
-        )
+    if search_for_info == "yes":
+      generate_queries_prompt = ChatPromptTemplate.from_messages([
+        ("human", """Analyze the question and come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. Here is an example:
+  Question: what are the locations of all my air handling units
+        
+  Queries: ['air handling units', 'ahu', 'ahu spaces', 'where are the air handling units located']
 
-    # Add the messages to the chat history
-    chat_history.add_messages(messages_to_add_to_chat)
+  Question: {input}
+        
+  Queries:"""),
+      ])
+
+      chain = generate_queries_prompt | chat
+
+      try:
+        response = chain.invoke({
+          "input": input
+        })
+        queries = response.content
+        queries = ast.literal_eval(queries.strip())
+      except Exception as e:
+        raise Exception("Failed to generate queries for the given input. Please try again.")
+
+      document_context = ""
+      sources = []
+
+      for query in queries:
+        document_query = DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, limit=2)
+        document_context += "Search Query: " + query + "\n" + "Search Results: \n"
+        search_results = self.document_repository.search(document_query)
+        for document_metadata_chunk in search_results:
+          document_context += f"Document Url: {document_metadata_chunk.metadata['document_url']}\n"
+          if "page_number" in document_metadata_chunk.metadata:
+            document_context += f"Page Number: {document_metadata_chunk.metadata['page_number']}\n"
+          document_context += f"Document Chunk Content: {document_metadata_chunk.content}\n\n"
+
+      input = f"Context from document search:\n{document_context}\n\nQuestion: {input}"
+      
+    prompt = self.chat_template
+    chain = prompt | chat
+    ai_response = ""
+    for chunk in chain.stream(
+      {
+        "user_context": user_context,
+        "portfolio_context": portfolio_context,
+        "facility_context": facility_context if facility_uri else None,
+        "input": input,
+        "chat_history": chat_history.messages
+      }
+    ):
+      ai_response += chunk.content
+      yield chunk.content
+    chat_history.add_messages([
+      HumanMessage(input),
+      AIMessage(ai_response)
+    ])
