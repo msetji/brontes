@@ -17,12 +17,14 @@ async def main():
   # Create the argument parser
   parser = argparse.ArgumentParser()
   parser.add_argument('--portfolio_uri', type=str, help='The portfolio ID to use for the chat', default="https://syyclops.com/example")
+  parser.add_argument('--facility_uri', type=str, help='The email of the user to chat with', default="https://syyclops.com/example/example")
   parser.add_argument('--email', type=str, help='The email of the user to chat with', default="example@example.com")
   parser.add_argument('--verbose', type=bool, default=False, help='Print verbose output') 
   args = parser.parse_args()
   verbose = args.verbose
   portfolio_uri = args.portfolio_uri
   email = args.email
+  facility_uri = args.facility_uri
 
   user = User(email=email, full_name="", hashed_password="")
 
@@ -59,7 +61,7 @@ async def main():
       break
 
     content = ""
-    async for chunk in ai_assistant_service.chat(user=user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose):
+    async for chunk in ai_assistant_service.chat(user=user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose, facility_uri=facility_uri):
       print(chunk, end="", flush=True)
       content += chunk
 
