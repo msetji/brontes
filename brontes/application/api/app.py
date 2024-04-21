@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
+import importlib.metadata
 
 from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
 from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository, AIRepository
@@ -58,7 +59,7 @@ bacnet_service = BACnetService(device_repository=device_repository)
 ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
   
 api_secret = os.getenv("API_TOKEN_SECRET")
-app = FastAPI(title="Brontes API")
+app = FastAPI(title="Brontes API", version=importlib.metadata.version("brontes"))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 security = HTTPBearer(auto_error=False)
 
