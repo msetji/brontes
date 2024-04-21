@@ -1,12 +1,12 @@
 version: "3.8"
 
 services:
-  brontes-server:
-    container_name: server
-    image: server:latest
+  brontes-api:
+    container_name: brontes-api
+    image: brontes-api:beta
     build:
       context: .
-      dockerfile: ./docker/Dockerfile.server
+      dockerfile: ./docker/brontesAPI/Dockerfile.api.prod
     volumes:
       - ./brontes:/app/brontes
     ports:

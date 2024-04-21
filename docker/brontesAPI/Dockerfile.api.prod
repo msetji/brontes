@@ -1,0 +1,51 @@
+# Use a multi-stage build to keep the final image size down
+FROM python:3.11-buster as builder
+
+# Install poetry at specified version
+RUN pip install poetry==1.4.2
+
+# Install PostgreSQL client libraries
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for poetry
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+# Copy only the files needed for the poetry installation
+COPY pyproject.toml poetry.lock ./
+
+# Create an empty README to avoid errors, run installation, and remove cache directory
+RUN touch README.md && \
+    poetry install --without dev --no-root && \
+    rm -rf $POETRY_CACHE_DIR
+
+# Use the official slim image for the runtime
+FROM python:3.11-slim-buster
+
+# Install PostgreSQL client libraries in the runtime image
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from the builder stage
+COPY --from=builder /app /app
+
+WORKDIR /app
+
+# Copy the application code and the wait-for-it script
+COPY brontes brontes
+
+# Install dotenv plugin
+RUN pip install poetry==1.4.2 && \
+    poetry self add poetry-dotenv-plugin
+
+EXPOSE 8080
+
+# Final command to run the application
+CMD ["poetry", "run", "server"]
