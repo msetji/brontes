@@ -3,8 +3,9 @@ import os
 import ast
 from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
+# from langchain_groq import ChatGroq
+from langchain_community.chat_models.perplexity import ChatPerplexity
+# from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -56,12 +57,12 @@ class AIAssistantService:
     # Initialize chat history manager
     chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
 
-    small_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-8b-8192")
-    big_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-70b-8192")
-    gpt_chat = ChatOpenAI(temperature=0, model="gpt-4-turbo")
-    pplx_sonar_online_chat = ChatOpenAI(temperature=0, model="sonar-medium-chat", base_url="https://api.perplexity.ai", api_key=os.environ["PPLX_API_KEY"])
-    pplx_llama_8b = ChatOpenAI(temperature=0, model="llama-3-8b-instruct", base_url="https://api.perplexity.ai", api_key=os.environ["PPLX_API_KEY"])
-    pplx_llama_70 = ChatOpenAI(temperature=0, model="llama-3-70b-instruct", base_url="https://api.perplexity.ai", api_key=os.environ["PPLX_API_KEY"])
+    # small_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-8b-8192")
+    # big_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-70b-8192")
+    # gpt_chat = ChatOpenAI(temperature=0, model="gpt-4-turbo")
+    # pplx_sonar_chat = ChatPerplexity(temperature=0, model="sonar-medium-chat", pplx_api_key=os.environ["PPLX_API_KEY"])
+    pplx_llama_8b = ChatPerplexity(temperature=0, model="llama-3-8b-instruct", pplx_api_key=os.environ["PPLX_API_KEY"])
+    pplx_llama_70 = ChatPerplexity(temperature=0, model="llama-3-70b-instruct", pplx_api_key=os.environ["PPLX_API_KEY"])
 
     # search_for_info_prompt = ChatPromptTemplate.from_messages([
     #   ("system", """Given a chat history between an ai and a user, analyze the question and determine if the ai should search for information in the building's documents. If the ai should search for information then return yes otherwise return no. Only Response with yes or no"""),
@@ -109,7 +110,7 @@ Queries:"""),
 
     chunk_index = 1
     for document_metadata_chunk in combined_results:
-      document_context += f"## Document Metadata Chunk {chunk_index}\n"
+      document_context += f"## Document Metadata Chunk Index: {chunk_index}\n"
       document_context += f"**Document Url**: {document_metadata_chunk.metadata['document_url']}\n"
       if "page_number" in document_metadata_chunk.metadata:
         document_context += f"**Page Number**: {document_metadata_chunk.metadata['page_number']}\n"
@@ -121,17 +122,15 @@ Queries:"""),
     # print(document_context)
 
     prompt = ChatPromptTemplate.from_messages([
-("system", """## Citation Instructions
-When generating text, please provide inline citations using markdown format. Use the following format for each citation in the "Citations" section: [Document Chunk Index](URL of the document)
+("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). You don't need to say which chunk you got the information from, just answer the question and provide the citations. If you don't know the answer, clearly indicate so instead of making assumptions or providing incorrect information.
 
-## Example Response
-The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf) The chillers are used to cool the building and maintain a comfortable temperature for occupants.[1](https://syyclops.com/example/doc.pdf)[2](https://syyclops.com/example2/doc2.pdf) 
+## Example Response:
+The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf)
  
 ## Answer Quality:
-Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable. If you're unsure or lack sufficient information, do not provide speculative or inaccurate responses.
-Transparency: If you don't know the answer, clearly indicate so instead of making assumptions or providing incorrect information."""),
+Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable."""),
       MessagesPlaceholder("chat_history"),
-      ("human", "Use this context to answer the question. Make sure to provide in line citations using Document Chunk Index:\n\n{document_context}\n\n Question: {input}")
+      ("human", "Use this context to answer the question.\n\n{document_context}\n\nQuestion: {input}")
     ])
 
     chain = prompt | pplx_llama_70
