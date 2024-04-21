@@ -44,16 +44,16 @@ class AIAssistantService:
                   print(f'Query {future_to_query[future]} generated an exception: {exc}')
       return results
               
-    # Initialize the chat history manager
-    user_context = user.full_name
-    portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
+    # user_context = user.full_name
+    # portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
 
-    if facility_uri:
-      # self.prompt.messages[0] += "\n\nCurrent Facility Context: {facility_context}"
-      facility = self.facility_repository.get_facility(facility_uri=facility_uri)
-      facility_name = facility.name
-      # facility_context = str(facility.model_dump())
+    # if facility_uri:
+    #   # self.prompt.messages[0] += "\n\nCurrent Facility Context: {facility_context}"
+    #   facility = self.facility_repository.get_facility(facility_uri=facility_uri)
+    #   facility_name = facility.name
+    #   # facility_context = str(facility.model_dump())
 
+    # Initialize chat history manager
     chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
 
     small_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-8b-8192")
@@ -113,21 +113,19 @@ Queries:"""),
       document_context += f"**Document Url**: {document_metadata_chunk.metadata['document_url']}\n"
       if "page_number" in document_metadata_chunk.metadata:
         document_context += f"**Page Number**: {document_metadata_chunk.metadata['page_number']}\n"
-      document_context += f"**Document Chunk Content**: {document_metadata_chunk.content}\n\n"
+      document_context += f"**Document Chunk Content**: {document_metadata_chunk.content}\n\n## End of Document Chunk\n\n"
 
       chunk_index += 1
 
-    print("Document Context:")
-    print(document_context)
+    # print("Document Context:")
+    # print(document_context)
 
     prompt = ChatPromptTemplate.from_messages([
 ("system", """## Citation Instructions
-When generating text, please provide citations in the following format:
-Use numerical citations in square brackets, e.g., [1], [2], [3]. Place the citations at the end of the sentence or clause that they support. If a sentence or clause has multiple sources, separate the citations with a space, e.g., [1] [2] [3]. Use the following format for each citation in the "Citations" section:
-[Document Chunk Index] URL of the document
+When generating text, please provide inline citations using markdown format. Use the following format for each citation in the "Citations" section: [Document Chunk Index](URL of the document)
 
 ## Example Response
-The chillers in the building are located in the basement.[1] The chillers are used to cool the building and maintain a comfortable temperature for occupants.[1][2]
+The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf) The chillers are used to cool the building and maintain a comfortable temperature for occupants.[1](https://syyclops.com/example/doc.pdf)[2](https://syyclops.com/example2/doc2.pdf) 
  
 ## Answer Quality:
 Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable. If you're unsure or lack sufficient information, do not provide speculative or inaccurate responses.
@@ -136,7 +134,7 @@ Transparency: If you don't know the answer, clearly indicate so instead of makin
       ("human", "Use this context to answer the question. Make sure to provide in line citations using Document Chunk Index:\n\n{document_context}\n\n Question: {input}")
     ])
 
-    chain = prompt | pplx_sonar_online_chat
+    chain = prompt | pplx_llama_70
     ai_response = ""
     for chunk in chain.stream(
       {

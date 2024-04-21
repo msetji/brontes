@@ -111,14 +111,17 @@ async def chat(
   current_user: User = Security(get_current_user)
 ) -> StreamingResponse:
   """Session id must be a valid uuid string"""
-  if document_uri and not facility_uri:
-    raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
-  
-  async def event_stream() -> Generator[str, None, None]:
-    async for chunk in ai_assistant_service.chat(user=current_user, session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
-      yield f"event: message\ndata: {json.dumps({'chunk': chunk})}\n\n"
+  try:
+    if document_uri and not facility_uri:
+      raise HTTPException(status_code=400, detail="If a document_uri is provided, a facility_uri must also be provided.")
+    
+    async def event_stream() -> Generator[str, None, None]:
+      async for chunk in ai_assistant_service.chat(user=current_user, session_id=session_id, input=input, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, verbose=False):
+        yield f"event: message\ndata: {json.dumps({'chunk': chunk})}\n\n"
 
-  return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+  except HTTPException as e:
+    return JSONResponse(content={"message": f"Unable to chat: {e}"}, status_code=500)
 
 @app.get("/chat/sessions", tags=["AI"])
 async def get_chat_sessions(current_user: User = Security(get_current_user)) -> JSONResponse:
