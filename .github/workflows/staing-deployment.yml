@@ -23,5 +23,5 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       - run: |
-          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/brontes:staging -f docker/Dockerfile.server
+          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/brontes:staging -f docker/brontesAPI/Dockerfile.api.prod
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/brontes:staging
