@@ -8,6 +8,8 @@ from langchain_community.chat_models.perplexity import ChatPerplexity
 # from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
+from langchain_core.documents import Document
 
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.model import DocumentQuery, User
@@ -103,10 +105,12 @@ Queries:"""),
 
     document_context = ""
 
-    combined_results = execute_queries_concurrently(queries)
+    combined_results: List[Document] = execute_queries_concurrently(queries)
 
     # print("Sources:")
     # print(combined_results[:2])
+
+    yield f"event: source\ndata: {json.dumps([result.dict() for result in combined_results])}\n\n"
 
     chunk_index = 1
     for document_metadata_chunk in combined_results:
@@ -133,7 +137,7 @@ Please keep answers concise and to the point. Aim for short paragraphs of 2-3 se
       ("human", "Use this context to answer the question.\n\n{document_context}\n\nQuestion: {input}")
     ])
 
-    chain = prompt | pplx_llama_70
+    chain = prompt | pplx_llama_70 
     ai_response = ""
     for chunk in chain.stream(
       {
@@ -147,7 +151,7 @@ Please keep answers concise and to the point. Aim for short paragraphs of 2-3 se
       }
     ):
       ai_response += chunk.content
-      yield chunk.content
+      yield f"event: message\ndata: {chunk.content}\n\n"
     chat_history.add_messages([
       HumanMessage(input),
       AIMessage(ai_response)

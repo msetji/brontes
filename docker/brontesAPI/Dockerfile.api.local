@@ -47,7 +47,8 @@ RUN chmod +x wait-for-it.sh
 
 # Install dotenv plugin
 RUN pip install poetry==1.4.2 && \
-    poetry self add poetry-dotenv-plugin
+    poetry self add poetry-dotenv-plugin && \
+    poetry install --no-dev
 
 EXPOSE 8080
 
