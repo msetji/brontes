@@ -65,7 +65,7 @@ async def main():
       event = chunk["event"]
       data = chunk["data"]
 
-      if event == "sources":
+      if event == "source":
         if verbose:
           print("Sources:")
           print(data)

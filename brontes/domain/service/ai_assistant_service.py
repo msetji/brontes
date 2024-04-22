@@ -82,9 +82,11 @@ class AIAssistantService:
       ("human", """Analyze the chat history and the last input from the user, then come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. 
        
 Here is an example response:
-['query 1, 'query 2', 'query 3', 'query 4']
+['air handling units', 'ahu', 'ahu spaces', 'where are the air handling units located']
 
 Chat History: {chat_history}
+       
+User Input: {input}
       
 Queries:"""),
     ])
@@ -93,7 +95,8 @@ Queries:"""),
 
     try:
       response = chain.invoke({
-        "chat_history": str([message.json() for message in chat_history.messages] + [HumanMessage(input).json()]),
+        "input": input,
+        "chat_history": str([f"Role: {message.type} Content: {message.content}" for message in chat_history.messages])
       })
       queries = response.content
       queries = ast.literal_eval(queries.strip())
@@ -110,7 +113,7 @@ Queries:"""),
     # print(combined_results[:2])
 
     # Return the sources
-    yield {"event": "sources", "data": [result.dict() for result in combined_results]}
+    yield {"event": "source", "data": [result.dict() for result in combined_results]}
 
     chunk_index = 1
     for document_metadata_chunk in combined_results:
@@ -123,12 +126,12 @@ Queries:"""),
       chunk_index += 1
 
     prompt = ChatPromptTemplate.from_messages([
-("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). DON'T say which chunk you got the information from, just answer the question and provide the citations. If you don't know the answer, clearly indicate so instead of making assumptions or providing incorrect information. You do not have access to the internet or any external resources beyond the provided documents.
+("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). DON'T say which chunk you got the information from, just answer the question and provide the citations. 
 
-## Example Response:
+Example Response:
 The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf)
  
-## Answer Quality:
+Answer Quality:
 Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable."""),
       MessagesPlaceholder("chat_history"),
       ("human", "Context from documents:\n\n{document_context}\n\n{input}")
