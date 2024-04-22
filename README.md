@@ -51,7 +51,7 @@ To learn more about DDD and its benefits, here are some resources:
 
 ## Quickstart
 
-### Prerequisite
+### Prerequisites
 
 1. [Install Docker](https://docs.docker.com/engine/install/)
 

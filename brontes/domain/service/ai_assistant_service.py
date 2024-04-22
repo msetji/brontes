@@ -8,7 +8,6 @@ from langchain_community.chat_models.perplexity import ChatPerplexity
 # from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
 from langchain_core.documents import Document
 
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
@@ -80,21 +79,21 @@ class AIAssistantService:
 
   # if search_for_info == "yes":
     generate_queries_prompt = ChatPromptTemplate.from_messages([
-      ("human", """Analyze the question and come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. Here is an example:
-Question: what are the locations of all my air handling units
-      
-Queries: ['air handling units', 'ahu', 'ahu spaces', 'where are the air handling units located']
+      ("human", """Analyze the chat history and the last input from the user, then come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. 
+       
+Here is an example response:
+['query 1, 'query 2', 'query 3', 'query 4']
 
-Question: {input}
+Chat History: {chat_history}
       
 Queries:"""),
     ])
 
-    chain = generate_queries_prompt | pplx_llama_8b
+    chain = generate_queries_prompt | pplx_llama_70
 
     try:
       response = chain.invoke({
-        "input": input
+        "chat_history": str([message.json() for message in chat_history.messages] + [HumanMessage(input).json()]),
       })
       queries = response.content
       queries = ast.literal_eval(queries.strip())
@@ -110,7 +109,8 @@ Queries:"""),
     # print("Sources:")
     # print(combined_results[:2])
 
-    yield f"event: source\ndata: {json.dumps([result.dict() for result in combined_results])}\n\n"
+    # Return the sources
+    yield {"event": "sources", "data": [result.dict() for result in combined_results]}
 
     chunk_index = 1
     for document_metadata_chunk in combined_results:
@@ -122,11 +122,8 @@ Queries:"""),
 
       chunk_index += 1
 
-    # print("Document Context:")
-    # print(document_context)
-
     prompt = ChatPromptTemplate.from_messages([
-("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). You don't need to say which chunk you got the information from, just answer the question and provide the citations. If you don't know the answer, clearly indicate so instead of making assumptions or providing incorrect information.
+("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). DON'T say which chunk you got the information from, just answer the question and provide the citations. If you don't know the answer, clearly indicate so instead of making assumptions or providing incorrect information. You do not have access to the internet or any external resources beyond the provided documents.
 
 ## Example Response:
 The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf)
@@ -134,10 +131,10 @@ The chillers in the building are located in the basement.[1](https://syyclops.co
 ## Answer Quality:
 Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable."""),
       MessagesPlaceholder("chat_history"),
-      ("human", "Use this context to answer the question.\n\n{document_context}\n\nQuestion: {input}")
+      ("human", "Context from documents:\n\n{document_context}\n\n{input}")
     ])
 
-    chain = prompt | pplx_llama_70 
+    chain = prompt | pplx_llama_70
     ai_response = ""
     for chunk in chain.stream(
       {
@@ -151,7 +148,9 @@ Please keep answers concise and to the point. Aim for short paragraphs of 2-3 se
       }
     ):
       ai_response += chunk.content
-      yield f"event: message\ndata: {json.dumps({'chunk': chunk.content})}\n\n"
+      yield {"event": "message", "data": {"chunk": chunk.content}}
+
+    # Save the message history
     chat_history.add_messages([
       HumanMessage(input),
       AIMessage(ai_response)
