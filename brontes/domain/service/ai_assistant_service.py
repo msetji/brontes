@@ -26,8 +26,8 @@ class AIAssistantService:
     return self.ai_repository.get_chat_sessions(user.email)
   
   async def chat(self, session_id: str, user: User, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
-    def process_query(query):
-      query =  DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, limit=4)
+    def process_query(query, limit = 4):
+      query =  DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, limit=limit)
       return self.document_repository.search(query)
 
     def execute_queries_concurrently(query_list):
@@ -79,16 +79,20 @@ class AIAssistantService:
 
   # if search_for_info == "yes":
     generate_queries_prompt = ChatPromptTemplate.from_messages([
-      ("human", """Analyze the chat history and the last input from the user, then come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. 
+      ("human", """Analyze the chat history and the last input from the user, then come up with a search query to find information from a buildings documents. Only return the query string.
        
-Here is an example response:
-['air handling units', 'ahu', 'ahu spaces', 'where are the air handling units located']
+--- Example: 
+       
+Input: What is the location of the chillers in the building?
+       
+Query: chiller location
+--- End of Example
 
 Chat History: {chat_history}
        
 User Input: {input}
       
-Queries:"""),
+Query:"""),
     ])
 
     chain = generate_queries_prompt | pplx_llama_70
@@ -98,16 +102,18 @@ Queries:"""),
         "input": input,
         "chat_history": str([f"Role: {message.type} Content: {message.content}" for message in chat_history.messages])
       })
-      queries = response.content
-      queries = ast.literal_eval(queries.strip())
-      print("Queries:")
-      print(queries)
+      query = response.content
+      # print("Query:")
+      # print(query)
+      # queries = ast.literal_eval(queries.strip())
+      # print("Queries:")
+      # print(queries)
     except Exception as e:
       raise Exception("Failed to generate queries for the given input. Please try again.")
 
     document_context = ""
 
-    combined_results: List[Document] = execute_queries_concurrently(queries)
+    combined_results: List[Document] = process_query(query, limit=20)
 
     # print("Sources:")
     # print(combined_results[:2])
