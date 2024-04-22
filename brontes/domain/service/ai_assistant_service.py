@@ -151,7 +151,7 @@ Please keep answers concise and to the point. Aim for short paragraphs of 2-3 se
       }
     ):
       ai_response += chunk.content
-      yield f"event: message\ndata: {chunk.content}\n\n"
+      yield f"event: message\ndata: {json.dumps({'chunk': chunk.content})}\n\n"
     chat_history.add_messages([
       HumanMessage(input),
       AIMessage(ai_response)
