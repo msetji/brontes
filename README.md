@@ -51,7 +51,7 @@ To learn more about DDD and its benefits, here are some resources:
 
 ## Quickstart
 
-There a few things that are needed to be installed in order to get going
+### Prerequisite
 
 1. [Install Docker](https://docs.docker.com/engine/install/)
 
@@ -85,15 +85,13 @@ export API_TOKEN_SECRET=<your api secret key>
 
 ### Build and start the docker containers
 
-_This will start postgres, neo4j, unstructured, and a rest api server_
+_This will start postgres, neo4j, unstructured, and the brontes api server_
 
 ```sh
 docker compose up -d --build
 ```
 
-### View the api swagger docs
-
-[http://localhost:8080/docs](http://localhost:8080/docs)
+### View the [swagger docs](http://localhost:8080/docs)
 
 ## Testing
 
