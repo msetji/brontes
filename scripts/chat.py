@@ -60,20 +60,18 @@ async def main():
     if user_input == "exit":
       break
 
-    content = ""
     async for chunk in ai_assistant_service.chat(user=user, session_id=session_id, input=user_input, portfolio_uri=portfolio_uri, verbose=verbose, facility_uri=facility_uri):
       event = chunk["event"]
       data = chunk["data"]
 
-      if event == "source":
+      if event == "tool_call":
         if verbose:
-          print("Sources:")
-          print(data)
+          print("Tool:")
+          print(data["tool_name"])
 
       if event == "message":
         chunk = data["chunk"]
         print(chunk, end="", flush=True)
-        content += chunk
 
     print()
 
