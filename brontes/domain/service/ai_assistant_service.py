@@ -1,14 +1,11 @@
 from typing import List, Generator
-import os
-import ast
+import json
 from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain_core.prompts import ChatPromptTemplate
-# from langchain_groq import ChatGroq
-from langchain_community.chat_models.perplexity import ChatPerplexity
-# from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage, HumanMessage
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from langchain_core.documents import Document
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, ToolCall
+from langchain_core.tools import tool
+from langchain_community.utilities.serpapi import SerpAPIWrapper
 
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
 from brontes.domain.model import DocumentQuery, User
@@ -26,136 +23,121 @@ class AIAssistantService:
     return self.ai_repository.get_chat_sessions(user.email)
   
   async def chat(self, session_id: str, user: User, input: str, portfolio_uri: str, facility_uri: str | None = None, document_uri: str | None = None, verbose: bool = False) -> Generator[str, None, None]:
-    def process_query(query):
-      query =  DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, limit=4)
-      return self.document_repository.search(query)
+    # Initialize chat history manager
+    chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
 
-    def execute_queries_concurrently(query_list):
-      results = []
-      # Using ThreadPoolExecutor to run queries in parallel
-      with ThreadPoolExecutor(max_workers=len(query_list)) as executor:
-          # Creating a future object for each query
-          future_to_query = {executor.submit(process_query, query): query for query in query_list}
-          
-          # Collecting results as they complete
-          for future in as_completed(future_to_query):
-              try:
-                  result = future.result()
-                  results.extend(result)
-              except Exception as exc:
-                  print(f'Query {future_to_query[future]} generated an exception: {exc}')
-      return results
-              
-    # user_context = user.full_name
+    # Define the tools that the AI assistant can use
+    @tool
+    def search_building_documents(query):
+      """Perform a search for information from building documents. These documents may be O&M manuals, as-builts, cut sheets, etc. If you use information from this tool, please provide in line citations using markdown format. Format like this: [Document Chunk Index](URL of the document). For example, [1](https://syyclops.com/example/doc.pdf)."""
+      query =  DocumentQuery(query=query, portfolio_uri=portfolio_uri, facility_uri=facility_uri, document_uri=document_uri, limit=15)
+      return self.document_repository.search(query)
+    
+    @tool
+    def web_search(query):
+      """Use google search to find information from the web."""
+      search = SerpAPIWrapper()
+      return search.run(query)
+    
+    tools = [search_building_documents, web_search]
+
+    # Get the context to be used in the chat
     # portfolio_context = str(self.portfolio_repository.get_portfolio(portfolio_uri=portfolio_uri).model_dump())
 
     # if facility_uri:
     #   # self.prompt.messages[0] += "\n\nCurrent Facility Context: {facility_context}"
     #   facility = self.facility_repository.get_facility(facility_uri=facility_uri)
     #   facility_name = facility.name
-    #   # facility_context = str(facility.model_dump())
+      # facility_context = str(facility.model_dump())
 
-    # Initialize chat history manager
-    chat_history = self.ai_repository.chat_history_client(user_email=user.email, session_id=session_id)
+    # Define the AI model and prompt template
+    llm = ChatOpenAI(model="gpt-4-turbo", temperature=0)
+    llm_with_tools = llm.bind_tools(tools)
 
-    # small_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-8b-8192")
-    # big_llama_chat = ChatGroq(temperature=0, groq_api_key=os.environ["GROQ_API_KEY"], model_name="llama3-70b-8192")
-    # gpt_chat = ChatOpenAI(temperature=0, model="gpt-4-turbo")
-    # pplx_sonar_chat = ChatPerplexity(temperature=0, model="sonar-medium-chat", pplx_api_key=os.environ["PPLX_API_KEY"])
-    pplx_llama_8b = ChatPerplexity(temperature=0, model="llama-3-8b-instruct", pplx_api_key=os.environ["PPLX_API_KEY"])
-    pplx_llama_70 = ChatPerplexity(temperature=0, model="llama-3-70b-instruct", pplx_api_key=os.environ["PPLX_API_KEY"])
-
-    # search_for_info_prompt = ChatPromptTemplate.from_messages([
-    #   ("system", """Given a chat history between an ai and a user, analyze the question and determine if the ai should search for information in the building's documents. If the ai should search for information then return yes otherwise return no. Only Response with yes or no"""),
-    #   ("human", "Chat History: {chat_history}\n\nAnalyze this message history and determine if the AI should search for information in the building's documents.")
-    # ])
-    # chain = search_for_info_prompt | pplx_llama_70 
-    # response = chain.invoke({
-    #   "chat_history": str([message.json() for message in chat_history.messages] + [HumanMessage(input).json()])
-    # })
-    # search_for_info = response.content
-    # print("Search for info?")
-    # print(search_for_info)
-
-  # if search_for_info == "yes":
-    generate_queries_prompt = ChatPromptTemplate.from_messages([
-      ("human", """Analyze the chat history and the last input from the user, then come up with 4 search queries to find information from a buildings documents. Only return the four query strings in an array and nothing else. 
-       
-Here is an example response:
-['air handling units', 'ahu', 'ahu spaces', 'where are the air handling units located']
-
-Chat History: {chat_history}
-       
-User Input: {input}
-      
-Queries:"""),
+    # Define the chat template
+    chat_template = ChatPromptTemplate.from_messages([
+      ("system", """This is a conversation between you and {user_name}. You are an AI Assistant for a digital twin applicaiton to help facility owners, managers, and operators run their facilities efficently. Provide in line citations using markdown format if you are sourcing information from somewhere. Keep your answers as short and sweeet as possible."""),
+      MessagesPlaceholder("chat_history")
     ])
+    # Format the chat messages
+    chat_history.add_message(HumanMessage(input)) # Add the user input to the chat history
+    
+    while True:
+      gathered_chunks = None
+      first = True
 
-    chain = generate_queries_prompt | pplx_llama_70
+      # Fill out the chat template with the chat history
+      messages = chat_template.format_messages(
+        user_name=user.email,
+        chat_history=chat_history.messages
+      )
 
-    try:
-      response = chain.invoke({
-        "input": input,
-        "chat_history": str([f"Role: {message.type} Content: {message.content}" for message in chat_history.messages])
-      })
-      queries = response.content
-      queries = ast.literal_eval(queries.strip())
-      print("Queries:")
-      print(queries)
-    except Exception as e:
-      raise Exception("Failed to generate queries for the given input. Please try again.")
+      ai_response = ""
+      async for chunk in llm_with_tools.astream(messages):
+        if "tool_calls" in chunk.additional_kwargs:
+          if first:
+            gathered_chunks = chunk
+            first = False
+          else: 
+            gathered_chunks = gathered_chunks + chunk
 
-    document_context = ""
+        else:
+          ai_response += chunk.content
+          yield {"event": "message", "data": {"chunk": chunk.content}}
 
-    combined_results: List[Document] = execute_queries_concurrently(queries)
+      # Check if there are any tool calls
+      # If there is then run them and return them back to the model to keep the conversation going
+      # If not then end the conversation
+      if gathered_chunks is not None:
+        tool_calls: List[ToolCall] = [ToolCall(name=tool_call['function']['name'], args=json.loads(tool_call['function']['arguments']), id=tool_call['id']) for tool_call in gathered_chunks.additional_kwargs["tool_calls"]]
+        
+        # Update the chat message history to show ai selected some tools to use
+        chat_history.add_message(AIMessage(content="", tool_calls=tool_calls))
 
-    # print("Sources:")
-    # print(combined_results[:2])
+        for tool_call in tool_calls:
+          tool_name = tool_call["name"]
+          tool_args = tool_call["args"]
+          tool_id = tool_call["id"]
 
-    # Return the sources
-    yield {"event": "source", "data": [result.dict() for result in combined_results]}
+          if verbose:
+            print(f"Selected tool: {tool_name}")
+            print(f"Tool Args: {tool_args}")
 
-    chunk_index = 1
-    for document_metadata_chunk in combined_results:
-      document_context += f"## Document Metadata Chunk Index: {chunk_index}\n"
-      document_context += f"**Document Url**: {document_metadata_chunk.metadata['document_url']}\n"
-      if "page_number" in document_metadata_chunk.metadata:
-        document_context += f"**Page Number**: {document_metadata_chunk.metadata['page_number']}\n"
-      document_context += f"**Document Chunk Content**: {document_metadata_chunk.content}\n\n## End of Document Chunk\n\n"
+          if tool_name == "search_building_documents":
+            try:
+              query = tool_args["query"]
+              document_results = search_building_documents(query)
 
-      chunk_index += 1
+              if verbose: print(f"The search results are: {document_results[:3]}")
 
-    prompt = ChatPromptTemplate.from_messages([
-("system", """When generating text, ALWAYS provide inline citations using markdown format. Use the following format for each citation: [Document Chunk Index](URL of the document). DON'T say which chunk you got the information from, just answer the question and provide the citations. 
+              # Create the context string to be used in the chat history
+              document_context = ""
+              chunk_index = 1
+              for document_metadata_chunk in document_results:
+                document_context += f"## Document Metadata Chunk Index: {chunk_index}\n"
+                document_context += f"**Document Url**: {document_metadata_chunk.metadata['document_url']}\n"
+                if "page_number" in document_metadata_chunk.metadata:
+                  document_context += f"**Page Number**: {document_metadata_chunk.metadata['page_number']}\n"
+                document_context += f"**Document Chunk Content**: {document_metadata_chunk.content}\n\n## End of Document Chunk\n\n"
+                chunk_index += 1
 
-Example Response:
-The chillers in the building are located in the basement.[1](https://syyclops.com/example/doc.pdf)
- 
-Answer Quality:
-Please keep answers concise and to the point. Aim for short paragraphs of 2-3 sentences each. Ensure answers are accurate and reliable."""),
-      MessagesPlaceholder("chat_history"),
-      ("human", "Context from documents:\n\n{document_context}\n\n{input}")
-    ])
+              # Yield the tool call event and add to the chat history
+              yield {"event": "source", "data": [result.dict() for result in document_results]}
+              chat_history.add_message(ToolMessage(content=document_context, tool_call_id=tool_id))
+            except Exception as e:
+              chat_history.add_message(ToolMessage(content=f"An error occurred while trying to search the building documents: {e}", tool_call_id=tool_id))
+          elif tool_name == "web_search":
+            try:
+              search_results = web_search(tool_args["query"])
+              if verbose: 
+                print(str(search_results))
+                print(len(search_results))
+              yield {"event": "web_search_results", "data": search_results}
 
-    chain = prompt | pplx_llama_70
-    ai_response = ""
-    for chunk in chain.stream(
-      {
-        # "user_context": user_context,
-        # "portfolio_context": portfolio_context,
-        # "facility_context": facility_context if facility_uri else None,
-        "input": input,
-        "chat_history": chat_history.messages,
-        # "facility_name": facility_name,
-        "document_context": document_context
-      }
-    ):
-      ai_response += chunk.content
-      yield {"event": "message", "data": {"chunk": chunk.content}}
-
-    # Save the message history
-    chat_history.add_messages([
-      HumanMessage(input),
-      AIMessage(ai_response)
-    ])
-    return
+              chat_history.add_message(ToolMessage(content=str(search_results), tool_call_id=tool_id))
+            except Exception as e:
+              chat_history.add_message(ToolMessage(content=f"An error occurred while trying to search the web: {e}", tool_call_id=tool_id))
+      else: 
+        # Add final ai response to chat history and return
+        chat_history.add_message(AIMessage(ai_response))
+        return
