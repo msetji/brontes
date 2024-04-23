@@ -23,7 +23,7 @@ class DocumentRepository:
       data = result.data()
       return [Document(**record['d']) for record in data]
   
-  def upload(self, facility_uri: str, file_content: bytes, file_name: str, file_type: str, discipline: Literal['Architectural', 'Plumbing', 'Electrical', 'Mechanical']) -> Document:
+  def upload(self, facility_uri: str, file_content: bytes, file_name: str, file_type: str, discipline: Literal['Architectural', 'Plumbing', 'Electrical', 'Mechanical'], space_uri: str | None = None, type_uri: str | None = None, component_uri: str | None = None) -> Document:
     """
     Upload a file for a facility.
 
@@ -45,10 +45,31 @@ class DocumentRepository:
     try:
       with self.kg.create_session() as session:
         doc_uri = f"{facility_uri}/document/{str(uuid4())}"
-        query = """CREATE (d:Document:Resource {name: $name, url: $url, extractionStatus: 'pending', thumbnailUrl: $thumbnail_url, uri: $doc_uri, discipline: $discipline})
-                    CREATE (d)-[:documentTo]->(:Facility {uri: $facility_uri})
-                    RETURN d"""
-        result = session.run(query, name=file_name, url=file_url, facility_uri=facility_uri, thumbnail_url=thumbnail_url, doc_uri=doc_uri, discipline=discipline)
+
+        #query for create document and relationship for given URI
+        query = """ CREATE (d:Document:Resource {name: $name, url: $url, extractionStatus: 'pending', thumbnailUrl: $thumbnail_url, uri: $doc_uri, discipline: $discipline}) """
+        query += " WITH d "
+        query += " MATCH(f:Facility:Resource {uri: $facility_uri}) "
+        createQuery = " CREATE (d)-[:documentTo]->(f)"
+
+        if space_uri is not None:
+          query += " , (s:Space:Resource {uri: $space_uri}) "
+          createQuery += " , (d)-[:documentTo]->(s) "
+
+        if type_uri is not None:
+          query += " , (t:Type:Resource {uri: $type_uri}) "
+          createQuery += " , (d)-[:documentTo]->(t) "
+
+        if component_uri is not None:
+          query += " , (c:Component:Resource {uri: $component_uri}) "
+          createQuery += " , (d)-[:documentTo]->(c) "
+
+        query += createQuery
+        query +=  """RETURN d"""
+
+        
+        result = session.run(query, name=file_name, url=file_url, facility_uri=facility_uri, thumbnail_url=thumbnail_url, doc_uri=doc_uri, discipline=discipline, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
+        
         data = result.data()
         if len(data) == 0: raise ValueError("Document not created")
         return Document(extractionStatus="pending", name=file_name, uri=doc_uri, url=file_url, thumbnailUrl=thumbnail_url)

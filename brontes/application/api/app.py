@@ -198,25 +198,44 @@ async def upload_files(
   facility_uri: str,
   background_tasks: BackgroundTasks,
   discipline: Literal['Architectural', 'Plumbing', 'Electrical', 'Mechanical'] = None,
+  space_uri: str | None = None,
+  type_uri: str | None = None,
+  component_uri: str | None = None,
   current_user: User = Security(get_current_user),
-):
-  uploaded_files_info = []  # To store info about uploaded files
-
-  for file in files:
-    try:
-      file_content = await file.read()
-      file_type = mimetypes.guess_type(file.filename)[0]
-      document = document_service.upload_document(facility_uri=facility_uri, file_content=file_content, file_name=file.filename, file_type=file_type, discipline=discipline)
-      background_tasks.add_task(document_service.run_extraction_process, portfolio_uri, facility_uri, file_content, file.filename, document.uri, document.url)
-      uploaded_files_info.append({"filename": file.filename, "uri": document.uri})
-    except Exception as e:  
-      return JSONResponse(
-          content={"message": f"Unable to upload file {file.filename}: {e}"},
-          status_code=500
-      )
-
-  return {"message": "Files uploaded successfully", "uploaded_files": uploaded_files_info}
-
+)-> JSONResponse:
+  uploaded_files_info = []  # To store info about uploaded files.
+  try:
+    #validate 
+    if portfolio_uri not in facility_uri:
+      raise HTTPException(status_code=412, detail="The Facility must belong to the same Portfolio") 
+    
+    if space_uri is not None and facility_uri not in space_uri:
+      raise HTTPException(status_code=412, detail="The Space must belong to the same Facility & Portfolio") 
+    
+    if type_uri is not None and facility_uri not in type_uri:
+      raise HTTPException(status_code=412, detail="The Type must belong to the same Facility & Portfolio") 
+    
+    if component_uri is not None and facility_uri not in component_uri:
+      raise HTTPException(status_code=412, detail="The Space must belong to the same Facility & Portfolio") 
+    
+    for file in files:
+      try:
+        file_content = await file.read()
+        file_type = mimetypes.guess_type(file.filename)[0]
+        
+        document = document_service.upload_document(facility_uri=facility_uri, file_content=file_content, file_name=file.filename, file_type=file_type, discipline=discipline, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
+        background_tasks.add_task(document_service.run_extraction_process, portfolio_uri, facility_uri, file_content, file.filename, document.uri, document.url)
+        uploaded_files_info.append({"filename": file.filename, "uri": document.uri})
+        
+      except Exception as e:  
+        return JSONResponse(
+            content={"message": f"Unable to upload file {file.filename}: {e}"},
+            status_code=500
+        )
+    return JSONResponse(status_code=200, content = {"message": "Files uploaded successfully", "uploaded_files": uploaded_files_info})
+  except HTTPException as e:  
+    raise e
+  
 @app.delete("/document/delete", tags=['Document'])
 async def delete_document(
   document_uri: str,
