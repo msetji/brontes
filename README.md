@@ -109,7 +109,7 @@ docker compose up -d --build
 Run all tests: `pytest`
 
 ## Useful Resources
-
-1. [What is COBie?](https://www.thenbs.com/knowledge/what-is-cobie)
-2. [Brick Schema](https://brickschema.org/)
-3. [Data-Driven Smart Buildings: State-of-the-Art Review](https://github.com/syyclops/open-operator/files/14202864/Annex.81.State-of-the-Art.Report.final.pdf)
+1. [COBieOWL_CameraReady_VE.pdf](https://github.com/syyclops/brontes/files/15070251/COBieOWL_CameraReady_VE.pdf)
+2. [What is COBie?](https://www.thenbs.com/knowledge/what-is-cobie)
+3. [Brick Schema](https://brickschema.org/)
+4. [Data-Driven Smart Buildings: State-of-the-Art Review](https://github.com/syyclops/open-operator/files/14202864/Annex.81.State-of-the-Art.Report.final.pdf)
