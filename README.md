@@ -1,10 +1,12 @@
 <div align="center">
   <div>
+  
   <a href="https://syyclops.com">
     <p align="center">
-      <img height=150 src="./docs/assets/logo192.png"/>
+      <img height=65 src="./docs/assets/logo192.png"/>
     </p>
   </a>
+
 </div>
 
 <h3>
@@ -17,13 +19,23 @@
 
 </div>
 
----
+## What is Brontes
 
-**Brontes** is a platform to bring buildings to life. It organizes and makes sense of diverse building information.
+A platform to create and interact with digital twins of facilities and their complex systems.
 
-- Organize and correlate all data sources from the building
-- Talk to your building like its a person
-- Your building can reach out to you when things might be going wrong
+## What is a digital twin?
+
+"a personalized, dynamically evolving model of a physical system." [Karen Willcox](https://www.youtube.com/watch?v=r2_VWdjxchY&t=40s&ab_channel=TED)
+
+Digital twins come from combining data from a real world asset (eg. sensors, maintenance logs) with models grounded in physics to create a simulator that represents the asset.
+
+## Levels of Digital Twin
+
+- [ ] 1. Descriptive - Virtual Replica of assets. (BIM modeling)
+- [ ] 2. Informative - Integrations with sensors, IT, and business software. Insights into basic conditions and performance.
+- [ ] 3. Predictive - Advanced analytics, identity patterns and provide early warnings before they happen. Smart building schedules. (predict when a space will need to be heated or cooled)
+- [ ] 4. Comprehensive - Physics based modeling, what if scenarios, prescriptive analytics.
+- [ ] 5. Autonomous – Ability to take actions and fix issues autonomously.
 
 ## Demo
 
@@ -47,7 +59,8 @@ The project aims to adhere to Domain Drive Design (DDD) principles as closely as
 To learn more about DDD and its benefits, here are some resources:
 
 ["Domain-Driven Design: Tackling Complexity in the Heart of Software"](https://fabiofumarola.github.io/nosql/readingMaterial/Evans03.pdf) by Eric Evans <br>
-["Implementing Domain-Driven Design"](https://dl.ebooksworld.ir/motoman/AW.Implementing.Domain-Driven.Design.www.EBooksWorld.ir.pdf) by Vaughn Vernon
+["Implementing Domain-Driven Design"](https://dl.ebooksworld.ir/motoman/AW.Implementing.Domain-Driven.Design.www.EBooksWorld.ir.pdf) by Vaughn Vernon <br>
+[Domain Driven Design and Python: David Seddon](https://www.youtube.com/watch?v=4XKhH9whNX0&list=WL&index=1&ab_channel=PyConUK)
 
 ## Quickstart
 
@@ -109,6 +122,7 @@ docker compose up -d --build
 Run all tests: `pytest`
 
 ## Useful Resources
+
 1. [COBieOWL_CameraReady_VE.pdf](https://github.com/syyclops/brontes/files/15070251/COBieOWL_CameraReady_VE.pdf)
 2. [What is COBie?](https://www.thenbs.com/knowledge/what-is-cobie)
 3. [Brick Schema](https://brickschema.org/)
