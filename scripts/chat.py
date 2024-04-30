@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# To run with different env file: POETRY_DOTENV_LOCATION=.env.beta poetry run scripts/chat.py 
+# To run with different env file: POETRY_DOTENV_LOCATION=.env.staging poetry run scripts/chat.py 
 
 from brontes.infrastructure import AzureBlobStore, KnowledgeGraph, Postgres
 from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
