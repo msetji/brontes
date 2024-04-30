@@ -50,10 +50,10 @@ services:
       context: .
       dockerfile: ./docker/neo4j/Dockerfile.neo4j
     volumes:
-      - $HOME/neo4j/data:/data
-      - $HOME/neo4j/logs:/logs
-      - $HOME/neo4j/import:/var/lib/neo4j/import
-      - $HOME/neo4j/plugins:/plugins
+      - ./.neo4j/data:/data
+      - ./.neo4j/logs:/logs
+      - ./.neo4j/import:/var/lib/neo4j/import
+      - ./.neo4j/plugins:/plugins
     ports:
       - 7474:7474
       - 7687:7687

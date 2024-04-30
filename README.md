@@ -76,8 +76,7 @@ To learn more about DDD and its benefits, here are some resources:
 ### Install brontes
 
 ```sh
-# Clone the repo and navigate into the brontes directory
-git clone https://github.com/syyclops/brontes.git
+git clone https://github.com/syyclops/brontes.git --config core.autocrlf=false # Config makes sure LF formatting is used in the .sh scripts so they run properly in docker containers
 cd brontes
 poetry install
 ```
