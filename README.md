@@ -21,7 +21,7 @@
 
 ## What is Brontes
 
-A platform to create and interact with digital twins of facilities and their complex systems.
+Brontes is open source infrastructure for managing digital twins of facilites and their complex systems.
 
 ## What is a digital twin?
 
@@ -31,11 +31,11 @@ Digital twins come from combining data from a real world asset (eg. sensors, mai
 
 ## Levels of Digital Twin
 
-- [ ] 1. Descriptive - Virtual Replica of assets. (BIM modeling)
-- [ ] 2. Informative - Integrations with sensors, IT, and business software. Insights into basic conditions and performance.
-- [ ] 3. Predictive - Advanced analytics, identity patterns and provide early warnings before they happen. Smart building schedules. (predict when a space will need to be heated or cooled)
-- [ ] 4. Comprehensive - Physics based modeling, what if scenarios, prescriptive analytics.
-- [ ] 5. Autonomous – Ability to take actions and fix issues autonomously.
+1. Descriptive - Virtual Replica of assets. (BIM modeling)
+2. Informative - Integrations with sensors, IT, and business software. Insights into basic conditions and performance.
+3. Predictive - Advanced analytics, identity patterns and provide early warnings before they happen. Smart building schedules. (predict when a space will need to be heated or cooled)
+4. Comprehensive - Physics based modeling, what if scenarios, prescriptive analytics.
+5. Autonomous – Ability to take actions and fix issues autonomously.
 
 ## Demo
 
@@ -45,21 +45,27 @@ https://github.com/syyclops/open-operator/assets/70538060/e9a833bd-b1e5-4a81-aef
 
 ## Project Structure
 
-The project is organized within a single base directory named brontes/, which contains all the components of the project:
+```
+- brontes/
+  - application/
+    - api/                      # Manages API endpoints
+    - services/                 # Application services: handle user input, validate data, and interact with domain + infrastructure layers
+    - dtos/                     # Data transfer objects
+  - domain/
+    - models/                   # Entities and value objects
+    - services/                 # Domain services: business rules, calculations, or other logic spanning across multiple domain entities
+  - infrastructure/
+    - repos/                    # Data fetching + persistence
+    - db/                       # Database connections + configs
+    - external/                 # API or other integrations
+- tests/
+  - integration/                # Integration tests
+  - unit/                       # Unit tests
+```
 
-- **application/**: Manages API endpoints, orchestrating the flow between the user and domain logic.
-- **domain/**: The core layer where business logic lives. It includes:
-  - **model/**: Defines the business entities and their behaviors.
-  - **repository/**: Interfaces for data access and manipulation.
-  - **service/**: Contains business operations and logic.
-- **infrastructure/**: Supports the application with database access, external API communication, and other technical capabilities.
-
-The project aims to adhere to Domain Drive Design (DDD) principles as closely as possible, structuring the codebase to mirror real-world business scenarios and ensuring it remains aligned with business goals.
-
-To learn more about DDD and its benefits, here are some resources:
+The project aims to follow Domain Drive Design (DDD). To learn more, here are some resources:
 
 ["Domain-Driven Design: Tackling Complexity in the Heart of Software"](https://fabiofumarola.github.io/nosql/readingMaterial/Evans03.pdf) by Eric Evans <br>
-["Implementing Domain-Driven Design"](https://dl.ebooksworld.ir/motoman/AW.Implementing.Domain-Driven.Design.www.EBooksWorld.ir.pdf) by Vaughn Vernon <br>
 [Domain Driven Design and Python: David Seddon](https://www.youtube.com/watch?v=4XKhH9whNX0&list=WL&index=1&ab_channel=PyConUK)
 
 ## Quickstart
@@ -107,9 +113,9 @@ docker compose up -d --build
 
 ## Testing
 
-- **[Unit Tests](./tests/unit/)**: Focus on parts of the applicaiton in isolation, primarily domain models and services. These test buisness rules, model validation, and behaviors of services without external dependencies
+- **[Unit Tests](./tests/unit/)**
 
-- **[Integration Tests](./tests/integration/)**: To ensure that various parts of the system work together as expected
+- **[Integration Tests](./tests/integration/)**
 
   We are using [testcontainers](https://testcontainers.com/) for integration tests. When running locally we need to build some images that will be used:
 

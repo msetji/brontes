@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from typing import List, Generator, Literal, Optional
-import mimetypes
+from typing import List, Generator, Optional
+from dataclasses import asdict
 import os
 import json
 import jwt
@@ -15,12 +15,13 @@ from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
 import importlib.metadata
 
-from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
-from brontes.domain.repository import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, COBieRepository, DeviceRepository, PointRepository, AIRepository
-from brontes.domain.service import PortfolioService, UserService, FacilityService, DocumentService, COBieService, DeviceService, PointService, BACnetService, AIAssistantService
-from brontes.domain.model import Portfolio, User, Facility, Document, DocumentQuery, DocumentMetadataChunk, Device, Point, PointUpdates, PointCreateParams, DeviceCreateParams
+from brontes.domain.models import Portfolio, User, Facility, Document, Device, Point, Discipline
+from brontes.application.dtos.document_dto import DocumentMetadataChunk, DocumentQuery
+from brontes.application.dtos.device_dto import DeviceCreateParams
+from brontes.application.dtos.point_dto import PointUpdates, PointCreateParams
 
-# Infrastructure/External Services
+### Infrastructure/External Services
+from brontes.infrastructure import KnowledgeGraph, AzureBlobStore, Postgres, Timescale, OpenaiAudio, MQTTClient
 ## Langchain
 embeddings = OpenAIEmbeddings()
 vector_store = PGVector(
@@ -37,27 +38,28 @@ timescale = Timescale(postgres=postgres)
 audio = OpenaiAudio()
 mqtt_client = MQTTClient()
 
-# Repositories
+### Repositories
+from brontes.infrastructure.repos import PortfolioRepository, UserRepository, FacilityRepository, DocumentRepository, DeviceRepository, PointRepository, AIRepository
 portfolio_repository = PortfolioRepository(kg=knowledge_graph)
 user_repository = UserRepository(kg=knowledge_graph)
 facility_repository = FacilityRepository(kg=knowledge_graph)
-document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
-cobie_repository = COBieRepository(kg=knowledge_graph, blob_store=blob_store)
+document_repository = DocumentRepository(kg=knowledge_graph)
 point_repository = PointRepository(kg=knowledge_graph, ts=timescale)
-device_repository = DeviceRepository(kg=knowledge_graph, blob_store=blob_store)
+device_repository = DeviceRepository(kg=knowledge_graph)
 ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
 
-# Services
+### Application Services
+from brontes.application.services import PortfolioService, UserService, FacilityService, DocumentService, CobieToGraphService, DeviceService, PointService, BacnetToGraphService, AIAssistantService
 portfolio_service = PortfolioService(portfolio_repository=portfolio_repository)
 user_service = UserService(user_repository=user_repository)
 facility_service = FacilityService(facility_repository=facility_repository)
-document_service = DocumentService(document_repository=document_repository)
-cobie_service = COBieService(cobie_repository=cobie_repository)
+document_service = DocumentService(document_repository=document_repository, vector_store=vector_store, blob_store=blob_store)
 device_service = DeviceService(device_repository=device_repository, point_repository=point_repository)
 point_service = PointService(point_repository=point_repository, device_repository=device_repository, mqtt_client=mqtt_client)
-bacnet_service = BACnetService(device_repository=device_repository)
-ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
-  
+ai_assistant_service = AIAssistantService(document_service=document_service, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
+cobie_service = CobieToGraphService(blob_store=blob_store, kg=knowledge_graph)
+bacnet_service = BacnetToGraphService(blob_store=blob_store, kg=knowledge_graph)
+
 api_secret = os.getenv("API_TOKEN_SECRET")
 app = FastAPI(title="Brontes API", version=importlib.metadata.version("brontes"))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -138,14 +140,14 @@ async def transcribe_audio(
     buffer = BytesIO(file_content)
     buffer.name = file.filename
     return Response(content=audio.transcribe(buffer))
-  except HTTPException as e:
+  except Exception as e:
     return JSONResponse(content={"message": f"Unable to transcribe audio: {e}"}, status_code=500)
 
 ## PORTFOLIO ROUTES
 @app.get("/portfolio/list", tags=['Portfolio'], response_model=List[Portfolio])
 async def list_portfolios(current_user: User = Security(get_current_user)) -> JSONResponse:
-  portfolios = portfolio_service.list_portfolios_for_user(current_user.email)
-  return JSONResponse([portfolio.model_dump() for portfolio in portfolios])
+  portfolios = portfolio_service.list(current_user.email)
+  return JSONResponse([asdict(portfolio) for portfolio in portfolios])
 
 @app.post("/portfolio/create", tags=['Portfolio'], response_model=Portfolio)
 async def create_portfolio(
@@ -154,14 +156,14 @@ async def create_portfolio(
 ) -> JSONResponse:
   try:
     portfolio = portfolio_service.create_portfolio(portfolio_name, current_user.email)
-    return JSONResponse(portfolio.model_dump())
-  except HTTPException as e:
+    return JSONResponse(asdict(portfolio))
+  except Exception as e:
     return JSONResponse(content={"message": f"Unable to create portfolio: {e}"}, status_code=500)
 
 ## FACILITY ROUTES
 @app.get("/facility/list", tags=['Facility'], response_model=List[Facility])
 async def list_facilities(portfolio_uri: str, current_user: User = Security(get_current_user)) -> JSONResponse:
-  return JSONResponse([facility.model_dump() for facility in facility_service.list_facilities_for_portfolio(portfolio_uri)])    
+  return JSONResponse([asdict(facility) for facility in facility_service.list_facilities_for_portfolio(portfolio_uri)])    
 
 @app.post("/facility/create", tags=['Facility'], response_model=Facility)
 async def create_facility(
@@ -171,8 +173,8 @@ async def create_facility(
 ) -> JSONResponse:
   try:
     facility = facility_service.create_facility(facility_name, portfolio_uri)
-    return JSONResponse(facility.model_dump())
-  except HTTPException as e:
+    return JSONResponse(asdict(facility))
+  except Exception as e:
     return JSONResponse(content={"message": f"Unable to create facility: {e}"}, status_code=500)
 
 ## DOCUMENTS ROUTES
@@ -195,9 +197,9 @@ async def list_documents(
     if component_uri is not None and facility_uri+"/" not in component_uri:
       raise HTTPException(status_code=412, detail="The Space must belong to the same Facility") 
     
-    docs = [doc.model_dump() for doc in document_service.list_documents(facility_uri,space_uri,type_uri,component_uri)]
+    docs = [asdict(doc) for doc in document_service.list_documents(facility_uri,space_uri,type_uri,component_uri)]
     return JSONResponse(status_code=200, content=docs)
-  except HTTPException as e:  
+  except Exception as e:  
     return JSONResponse(
       content={"message": f"Unable to list documents: {e}"},
       status_code=500
@@ -208,7 +210,7 @@ async def search_documents(
   query: DocumentQuery,
   current_user: User = Security(get_current_user)
 ) -> JSONResponse:
-  return JSONResponse([chunk.model_dump() for chunk in document_service.search(query)])
+  return JSONResponse([asdict(chunk) for chunk in document_service.search(query)])
 
 @app.post("/documents/upload", tags=['Document'])
 async def upload_files(
@@ -216,7 +218,7 @@ async def upload_files(
   portfolio_uri: str,
   facility_uri: str,
   background_tasks: BackgroundTasks,
-  discipline: Literal['Architectural', 'Plumbing', 'Electrical', 'Mechanical'] = None,
+  discipline: Discipline = None,
   space_uri: str | None = None,
   type_uri: str | None = None,
   component_uri: str | None = None,
@@ -240,10 +242,9 @@ async def upload_files(
     for file in files:
       try:
         file_content = await file.read()
-        file_type = mimetypes.guess_type(file.filename)[0]
         
-        document = document_service.upload_document(facility_uri=facility_uri, file_content=file_content, file_name=file.filename, file_type=file_type, discipline=discipline, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
-        background_tasks.add_task(document_service.run_extraction_process, portfolio_uri, facility_uri, file_content, file.filename, document.uri, document.url)
+        document = document_service.upload_document(facility_uri=facility_uri, file_content=file_content, file_name=file.filename, discipline=discipline, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
+        background_tasks.add_task(document_service.run_extraction_process, portfolio_uri, facility_uri, file_content, document)
         uploaded_files_info.append({"filename": file.filename, "uri": document.uri})
         
       except Exception as e:  
@@ -252,7 +253,7 @@ async def upload_files(
             status_code=500
         )
     return JSONResponse(status_code=200, content = {"message": "Files uploaded successfully", "uploaded_files": uploaded_files_info})
-  except HTTPException as e:  
+  except Exception as e:  
     raise e
   
 @app.delete("/document/delete", tags=['Document'])
@@ -265,13 +266,13 @@ async def delete_document(
     return JSONResponse(content={
       "message": "Document deleted successfully",
     })
-  except HTTPException as e:
+  except Exception as e:
     return JSONResponse(
       content={"message": f"Unable to delete document: {e}"},
       status_code=400
     )
   
-# ## DEVICES ROUTES
+## DEVICES ROUTES
 @app.get("/devices", tags=['Devices'], response_model=List[Device])
 async def list_devices(
   facility_uri: str,
@@ -282,7 +283,7 @@ async def list_devices(
     devices = device_service.get_devices(facility_uri=facility_uri, component_uri=component_uri)
     # for device in devices: # Remove the embedding from the response
     #   device.pop('embedding', None)
-    devices = [device.model_dump() for device in devices]
+    devices = [asdict(device) for device in devices]
     return JSONResponse(devices)
   except HTTPException as e:
     return JSONResponse(
@@ -315,7 +316,7 @@ async def create_device(
 ) -> JSONResponse:
   try:
     device = device_service.create_device(facility_uri=facility_uri, device=device)
-    return JSONResponse(device.model_dump())
+    return JSONResponse(asdict(device))
   except HTTPException as e:
     return JSONResponse(
         content={"message": f"Unable to create device: {e}"},
@@ -351,7 +352,7 @@ async def update_device(
         status_code=500
     )
   
-## POINTS ROUTES
+## POINT ROUTES
 @app.get("/points", tags=['Points'], response_model=List[Point])
 async def list_points(
   facility_uri: str,
@@ -360,7 +361,7 @@ async def list_points(
   current_user: User = Security(get_current_user)
 ) -> JSONResponse:
   points = point_service.get_points(facility_uri=facility_uri, component_uri=component_uri, collect_enabled=collect_enabled)
-  points = [point.model_dump() for point in points]
+  points = [asdict(point) for point in points]
   for point in points: # Remove the embedding from the response
     point.pop('embedding', None)
   return JSONResponse(points)
@@ -371,14 +372,7 @@ async def get_point(
   current_user: User = Security(get_current_user)
 ) -> JSONResponse:
   point = point_service.get_point(point_uri=point_uri)
-  return JSONResponse(point.model_dump())
-
-@app.get("/point/live", tags=['Points'])
-async def get_live_reading(
-  point_uri: str,
-  current_user: User = Security(get_current_user)
-) -> JSONResponse:
-  return JSONResponse(point_service.get_live_reading(point_uri))
+  return JSONResponse(asdict(point))
 
 @app.post("/point/create", tags=['Points'], response_model=Point)
 async def create_point(
@@ -390,7 +384,7 @@ async def create_point(
 ) -> JSONResponse:
   try:
     point = point_service.create_point(facility_uri=facility_uri, device_uri=device_uri, point=point, brick_class_uri=brick_class_uri)
-    return JSONResponse(point.model_dump())
+    return JSONResponse(asdict(point))
   except HTTPException as e:
     return JSONResponse(
         content={"message": f"Unable to create point: {e}"},

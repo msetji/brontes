@@ -3,7 +3,9 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 import time
 
-from brontes.infrastructure import KnowledgeGraph, Postgres, Timescale
+from brontes.infrastructure.db.knowledge_graph import KnowledgeGraph 
+from brontes.infrastructure.db.timescale import Timescale
+from brontes.infrastructure.db.postgres import Postgres
 
 @pytest.fixture(scope="session")
 def neo4j_container():

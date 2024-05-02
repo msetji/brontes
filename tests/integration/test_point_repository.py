@@ -1,5 +1,6 @@
-from brontes.domain.repository import PointRepository
-from brontes.domain.model import Point, Device, PointUpdates
+from brontes.infrastructure.repos import PointRepository
+from brontes.domain.models import Point, Device
+from brontes.application.dtos.point_dto import PointUpdates
 import pytest
 
 @pytest.fixture(scope="session")

@@ -1,5 +1,5 @@
 from brontes.infrastructure import MQTTClient, Timescale, Postgres
-from brontes.domain.model import PointReading
+from brontes.application.dtos.point_dto import PointReading
 from threading import Lock, Timer
 from typing import List
 import atexit

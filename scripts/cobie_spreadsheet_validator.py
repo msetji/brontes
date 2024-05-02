@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from brontes.domain.model import COBieSpreadsheet
+from brontes.domain.services.cobie_processor import COBieProcessor 
 import argparse
 
 parser = argparse.ArgumentParser(description='Validate a COBie spreadsheet')
@@ -12,7 +12,7 @@ output_path = args.output
 
 # Validate the COBie spreadsheet
 with open(path, 'rb') as file:
-  spreadsheet = COBieSpreadsheet(file.read())
+  spreadsheet = COBieProcessor(file.read())
   errors_found, errors, updated_file = spreadsheet.validate()
   if errors_found:
     print(errors)

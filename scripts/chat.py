@@ -3,9 +3,9 @@
 # To run with different env file: POETRY_DOTENV_LOCATION=.env.staging poetry run scripts/chat.py 
 
 from brontes.infrastructure import AzureBlobStore, KnowledgeGraph, Postgres
-from brontes.domain.repository import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
-from brontes.domain.service import AIAssistantService
-from brontes.domain.model import User
+from brontes.infrastructure.repos import DocumentRepository, PortfolioRepository, AIRepository, FacilityRepository
+from brontes.application.services import AIAssistantService, DocumentService
+from brontes.domain.models import User
 import argparse
 from langchain_postgres import PGVector
 from langchain_openai import OpenAIEmbeddings
@@ -41,13 +41,14 @@ async def main():
   )
 
   # Repositories
-  document_repository = DocumentRepository(kg=knowledge_graph, blob_store=blob_store, vector_store=vector_store)
+  document_repository = DocumentRepository(kg=knowledge_graph)
   portfolio_repository = PortfolioRepository(kg=knowledge_graph)
   ai_repository = AIRepository(postgres=postgres, kg=knowledge_graph)
   facility_repository = FacilityRepository(kg=knowledge_graph)
   
-  # Services
-  ai_assistant_service = AIAssistantService(document_repository=document_repository, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
+  # Application Services
+  document_service = DocumentService(document_repository=document_repository, blob_store=blob_store, vector_store=vector_store)
+  ai_assistant_service = AIAssistantService(document_service=document_service, portfolio_repository=portfolio_repository, ai_repository=ai_repository, facility_repository=facility_repository)
 
   session_id = str(uuid.uuid4())
   print(f"Session ID: {session_id}")
