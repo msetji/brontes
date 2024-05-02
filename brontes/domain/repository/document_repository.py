@@ -2,7 +2,7 @@ import fitz
 import io
 import os
 from uuid import uuid4
-from typing import List, Literal
+from typing import List, Literal, Optional
 import tempfile
 from langchain.vectorstores import VectorStore
 from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
@@ -17,9 +17,18 @@ class DocumentRepository:
     self.blob_store = blob_store
     self.vector_store = vector_store
 
-  def list(self, facility_uri: str) -> List[Document]:
+  def list(self, facility_uri: str, space_uri: Optional[str] = None, type_uri: Optional[str] = None, component_uri: Optional[str] = None) -> List[Document]:
     with self.kg.create_session() as session:
-      result = session.run("MATCH (d:Document)-[:documentTo]-(f:Facility {uri: $facility_uri}) RETURN d", facility_uri=facility_uri)
+      query = "MATCH (d:Document)-[:documentTo]-(f:Facility {uri: $facility_uri})"
+      if space_uri is not None:
+        query += " MATCH (d)-[:documentTo]-(s:Space {uri: $space_uri}) "
+      if type_uri is not None:
+        query += " MATCH (d)-[:documentTo]-(t:Type {uri: $type_uri}) "
+      if component_uri is not None:
+        query += " MATCH (d)-[:documentTo]-(c:Component {uri: $component_uri}) "
+      query += " return distinct d"
+
+      result = session.run(query, facility_uri=facility_uri, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)  
       data = result.data()
       return [Document(**record['d']) for record in data]
   

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from typing import List, Generator, Literal
+from typing import List, Generator, Literal, Optional
 import mimetypes
 import os
 import json
@@ -179,10 +179,29 @@ async def create_facility(
 @app.get("/documents", tags=['Document'], response_model=List[Document])
 async def list_documents(
   facility_uri: str,
+  space_uri: Optional[str] = None,
+  type_uri: Optional[str] = None,
+  component_uri: Optional[str] = None,
   current_user: User = Security(get_current_user)
 ) -> JSONResponse:
-  docs = [doc.model_dump() for doc in document_service.list_documents(facility_uri)]
-  return JSONResponse(docs)
+  try:
+    #Validate
+    if space_uri is not None and facility_uri+"/" not in space_uri:
+      raise HTTPException(status_code=412, detail="The Space must belong to the same Facility") 
+    
+    if type_uri is not None and facility_uri+"/" not in type_uri:
+      raise HTTPException(status_code=412, detail="The Type must belong to the same Facility") 
+    
+    if component_uri is not None and facility_uri+"/" not in component_uri:
+      raise HTTPException(status_code=412, detail="The Space must belong to the same Facility") 
+    
+    docs = [doc.model_dump() for doc in document_service.list_documents(facility_uri,space_uri,type_uri,component_uri)]
+    return JSONResponse(status_code=200, content=docs)
+  except HTTPException as e:  
+    return JSONResponse(
+      content={"message": f"Unable to list documents: {e}"},
+      status_code=500
+    )
   
 @app.post("/documents/search", tags=['Document'], response_model=List[DocumentMetadataChunk])
 async def search_documents(

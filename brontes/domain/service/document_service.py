@@ -1,13 +1,13 @@
 from brontes.domain.repository import DocumentRepository
 from brontes.domain.model.document import Document, DocumentQuery
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 class DocumentService:
   def __init__(self, document_repository: DocumentRepository):
     self.document_repository = document_repository
 
-  def list_documents(self, facility_uri: str) -> List[Document]:
-    return self.document_repository.list(facility_uri)
+  def list_documents(self, facility_uri: str, space_uri: Optional[str] = None, type_uri: Optional[str] = None, component_uri: Optional[str] = None) -> List[Document]:
+    return self.document_repository.list(facility_uri,space_uri,type_uri,component_uri)
 
   def upload_document(self, facility_uri: str, file_content: bytes, file_name: str, file_type: str, discipline: Literal['Architectural', 'Plumbing', 'Electrical', 'Mechanical'] , space_uri: str | None = None, type_uri: str | None = None, component_uri: str | None = None) -> Document:
    return self.document_repository.upload(facility_uri, file_content, file_name, file_type, discipline,space_uri,type_uri,component_uri)
