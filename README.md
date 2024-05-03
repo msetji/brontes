@@ -39,9 +39,7 @@ Digital twins come from combining data from a real world asset (eg. sensors, mai
 
 ## Demo
 
-_Example chat with a building. [See code here](./scripts/chat.py)_
-
-https://github.com/syyclops/open-operator/assets/70538060/e9a833bd-b1e5-4a81-aef5-083f8b163144
+https://github.com/syyclops/brontes/assets/70538060/591f94ec-cd20-4ba5-8dd3-72e4319fb6ba
 
 ## Project Structure
 
