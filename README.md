@@ -75,8 +75,10 @@ The project aims to follow Domain Drive Design (DDD). To learn more, here are so
 1. [Install Docker](https://docs.docker.com/engine/install/)
 
 2. ```sh
-   # Install poetry
-   curl -sSL https://install.python-poetry.org | python3 -
+    brew install postgresql # If you are on mac then run this line
+
+    # Install poetry
+    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
 ### Install brontes
