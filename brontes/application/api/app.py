@@ -357,7 +357,7 @@ async def update_device(
 async def list_points(
   facility_uri: str,
   component_uri: str | None = None,
-  collect_enabled: bool | None = None,
+  collect_enabled: bool = True,
   current_user: User = Security(get_current_user)
 ) -> JSONResponse:
   points = point_service.get_points(facility_uri=facility_uri, component_uri=component_uri, collect_enabled=collect_enabled)
