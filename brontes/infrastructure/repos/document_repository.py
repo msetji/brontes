@@ -31,9 +31,9 @@ class DocumentRepository:
         data = session.run(query=query, facility_uri=facility_uri, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri).data()
         return [
           Document(
-            uri=record['d']['uri'], 
-            name=record['d']['name'], 
-            url=record['d']['url'], 
+            uri=record['d'].get('uri'), 
+            name=record['d'].get('name'), 
+            url=record['d'].get('url'), 
             extractionStatus=record['d'].get('extractionStatus'),
             thumbnailUrl=record['d'].get('thumbnailUrl'),
             discipline=record['d'].get('discipline'),
