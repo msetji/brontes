@@ -78,7 +78,7 @@ class DocumentRepository:
 
         # Create the document dict, get the discpline enum value
         document_dict = asdict(document)
-        document_dict['discipline'] = document.discipline.value
+        document_dict['discipline'] = document.discipline.value if document.discipline is not None else None
 
         # Run the query
         result = session.run(query, document=document_dict, facility_uri=facility_uri, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
