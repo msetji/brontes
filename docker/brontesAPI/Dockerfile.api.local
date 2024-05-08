@@ -53,4 +53,4 @@ RUN pip install poetry==1.4.2 && \
 EXPOSE 8080
 
 # Final command to run the application
-CMD ["./wait-for-it.sh", "-t", "30", "neo4j_with_plugins:7474", "--", "poetry", "run", "server"]
+CMD ["./wait-for-it.sh", "-t", "30", "neo4j_with_plugins:7474", "--", "poetry", "run", "start"]

@@ -66,50 +66,91 @@ The project aims to follow Domain Drive Design (DDD). To learn more, here are so
 ["Domain-Driven Design: Tackling Complexity in the Heart of Software"](https://fabiofumarola.github.io/nosql/readingMaterial/Evans03.pdf) by Eric Evans <br>
 [Domain Driven Design and Python: David Seddon](https://www.youtube.com/watch?v=4XKhH9whNX0&list=WL&index=1&ab_channel=PyConUK)
 
-## Quickstart
+## Devcontainer Full Local Development
 
-### Prerequisites
+### Usage
 
-1. [Install Docker](https://docs.docker.com/engine/install/)
+Prerequisites:
 
-2. ```sh
-    brew install postgresql # If you are on mac then run this line
+1. [Install Docker](https://docs.docker.com/install) on your local environment
 
-    # Install poetry
-    curl -sSL https://install.python-poetry.org | python3 -
-   ```
+2. Set the required environment variables, use .env.example file as a starting point
 
-### Install brontes
-
-```sh
-git clone https://github.com/syyclops/brontes.git --config core.autocrlf=false # Config makes sure LF formatting is used in the .sh scripts so they run properly in docker containers
-cd brontes
-poetry install
-```
-
-_To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
-
-### Set the required environment variables
-
-_Use .env.example file as a starting point_
-
-```sh
+```shell
 cp .env.example .env
+
 export OPENAI_API_KEY=<your secret key>
 export AZURE_STORAGE_CONNECTION_STRING=<your azure storage container>
 export AZURE_CONTAINER_NAME=<your azure container name>
 export API_TOKEN_SECRET=<your api secret key>
 ```
 
-### Build and start the docker containers
+To get started, read and follow the instructions in [Developing inside a Container](https://code.visualstudio.com/docs/remote/containers). The [.devcontainer/](./.devcontainer) directory contains pre-configured `devcontainer.json` and `docker-compose.yml` which you can use to set up remote development within a docker container.
 
-_This will start postgres, neo4j, unstructured, and the brontes api server_
+- Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+- Open VSCode and bring up the [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette).
+- Type `Dev Containers: Rebuild and Reopen in container`, this will build the container with python and poetry installed, this will also start Postgres, Neo4j, HiveMq, and Unstructured instances.
 
-```sh
-docker compose up -d --build
+### Run
+
+```shell
+poetry install
+poetry run start
 ```
 
-### View the [swagger docs](http://localhost:8080/docs)
+## Manual Full Local Development
+
+### Backend
+
+#### PostgreSQL
+
+Install PostgreSQL:
+
+- **macOS**: Run `brew install postgresql`.
+- **Windows**: Follow [this](https://www.postgresqltutorial.com/install-postgresql/) guide.
+- **Linux**: Follow [this](https://www.postgresqltutorial.com/install-postgresql-linux/) guide.
+
+Start PostgreSQL:
+
+- **macOS**: Run `brew services start postgresql`.
+- **Windows**: Start PostgreSQL through the control panel or run `net start postgresql-{version}`.
+- **Linux**: Run `/etc/rc.d/init.d/postgresql start`.
+
+#### Neo4j
+
+#### Unstructured
+
+#### HiveMq
+
+#### `Brontes`
+
+- Install poetry: `curl -sSL https://install.python-poetry.org | python3 -`
+- Install brontes: `poetry install`
+
+Set the following environment variables:
+
+```
+NEO4J_USER="neo4j"
+NEO4J_PASSWORD="neo4j-password"
+NEO4J_URI="bolt://0.0.0.0:7687"
+POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@localhost:5432/postgres
+POSTGRES_EMBEDDINGS_TABLE=langchain_embeddings
+UNSTRUCTURED_URL=http://0.0.0.0:8000
+UNSTRUCTURED_API_KEY=FAKE_API_KEY
+MQTT_BROKER_ADDRESS=localhost
+MQTT_USERNAME=
+MQTT_PASSWORD=
+API_TOKEN_SECRET=secretapitoken
+ENV=dev
+OPENAI_API_KEY=
+AZURE_STORAGE_CONNECTION_STRING=
+AZURE_CONTAINER_NAME=
+AUTODESK_CLIENT_ID=
+AUTODESK_CLIENT_SECRET=
+SERPAPI_API_KEY=
+```
+
+_To make poetry create a virtualenv in the project: `poetry config virtualenvs.in-project true`_
 
 ## Testing
 

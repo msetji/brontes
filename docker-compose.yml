@@ -1,8 +1,6 @@
 version: "3.8"
 services:
   brontes-api:
-    container_name: brontes-api
-    image: brontes-api:local
     build:
       context: .
       dockerfile: ./docker/brontesAPI/Dockerfile.api.local
@@ -23,7 +21,6 @@ services:
       - pg
 
   unstructured:
-    container_name: unstructured
     image: quay.io/unstructured-io/unstructured-api:latest
     ports:
       - 8000:8000
@@ -31,29 +28,23 @@ services:
       - local
 
   pg:
-    container_name: pg
-    image: pg:latest
     build:
       context: .
       dockerfile: ./docker/postgres/Dockerfile.pg
     volumes:
-      - ./.postgresql/data:/var/lib/postgresql/data
+      - postgresqldata:/var/lib/postgresql/data
     ports:
       - 5432:5432
     networks:
       - local
 
   neo4j_with_plugins:
-    container_name: neo4j_with_plugins
-    image: neo4j_with_plugins:latest
     build:
       context: .
       dockerfile: ./docker/neo4j/Dockerfile.neo4j
     volumes:
-      - ./.neo4j/data:/data
-      - ./.neo4j/logs:/logs
-      - ./.neo4j/import:/var/lib/neo4j/import
-      - ./.neo4j/plugins:/plugins
+      - neo4jdata:/data
+      - neo4jlogs:/logs
     ports:
       - 7474:7474
       - 7687:7687
@@ -62,3 +53,8 @@ services:
 
 networks:
   local:
+
+volumes:
+  postgresqldata:
+  neo4jdata:
+  neo4jlogs:

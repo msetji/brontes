@@ -2,8 +2,6 @@ version: "3.8"
 
 services:
   brontes-api:
-    container_name: brontes-api
-    image: brontes-api:staging
     build:
       context: .
       dockerfile: ./docker/brontesAPI/Dockerfile.api.prod

@@ -46,5 +46,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-server = "brontes.application.api.app:start"
+start = "brontes.application.api.app:start"
 mqtt2timescale = "brontes.application.mqtt.mqtt2timescale:start"

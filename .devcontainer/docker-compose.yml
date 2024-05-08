@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+
+  unstructured:
+    container_name: unstructured
+    image: quay.io/unstructured-io/unstructured-api:latest
+    network_mode: service:workspace
+
+  pg:
+    container_name: pg
+    image: pg:latest
+    build:
+      context: ..
+      dockerfile: ./docker/postgres/Dockerfile.pg
+    volumes:
+      - postgresqldata:/var/lib/postgresql/data
+    network_mode: service:workspace
+
+  neo4j_with_plugins:
+    container_name: neo4j_with_plugins
+    image: neo4j_with_plugins:latest
+    build:
+      context: ..
+      dockerfile: ./docker/neo4j/Dockerfile.neo4j
+    volumes:
+      - neo4jdata:/data
+      - neo4jlogs:/logs
+    network_mode: service:workspace
+
+volumes:
+  postgresqldata:
+  neo4jdata:
+  neo4jlogs:

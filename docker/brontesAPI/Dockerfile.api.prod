@@ -49,4 +49,4 @@ RUN pip install poetry==1.4.2 && \
 EXPOSE 8080
 
 # Final command to run the application
-CMD ["poetry", "run", "server"]
+CMD ["poetry", "run", "start"]
