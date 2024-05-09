@@ -219,9 +219,9 @@ async def upload_files(
   facility_uri: str,
   background_tasks: BackgroundTasks,
   discipline: Discipline = None,
-  space_uri: str | None = None,
-  type_uri: str | None = None,
-  component_uri: str | None = None,
+  space_uri: Optional[str] = None,
+  type_uri: Optional[str] = None,
+  component_uri: Optional[str] = None,
   current_user: User = Security(get_current_user),
 )-> JSONResponse:
   uploaded_files_info = []  # To store info about uploaded files.
@@ -242,9 +242,7 @@ async def upload_files(
     for file in files:
       try:
         file_content = await file.read()
-        
-        document = document_service.upload_document(facility_uri=facility_uri, file_content=file_content, file_name=file.filename, discipline=discipline, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
-        background_tasks.add_task(document_service.run_extraction_process, portfolio_uri, facility_uri, file_content, document)
+        document = document_service.upload_document(portfolio_uri=portfolio_uri, facility_uri=facility_uri, file_content=file_content, file_name=file.filename, discipline=discipline, background_tasks=background_tasks, space_uri = space_uri, type_uri = type_uri, component_uri = component_uri)
         uploaded_files_info.append({"filename": file.filename, "uri": document.uri})
         
       except Exception as e:  

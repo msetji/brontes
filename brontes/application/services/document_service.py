@@ -6,6 +6,7 @@ import fitz
 import io
 from uuid import uuid4
 import mimetypes
+from fastapi import BackgroundTasks
 
 from langchain.vectorstores import VectorStore
 from langchain_community.document_loaders.unstructured import UnstructuredAPIFileLoader
@@ -15,6 +16,7 @@ from brontes.infrastructure.repos import DocumentRepository
 from brontes.domain.models import Document, Discipline
 from brontes.application.dtos.document_dto import DocumentQuery, DocumentMetadataChunk
 from brontes.infrastructure import BlobStore
+from brontes.utils import video_thumbnail
 
 class DocumentService:
   """
@@ -33,7 +35,14 @@ class DocumentService:
     except Exception as e:
       raise e
 
-  def upload_document(self, facility_uri: str, file_content: bytes, file_name: str, discipline: Discipline, space_uri: str | None = None, type_uri: str | None = None, component_uri: str | None = None) -> Optional[Document]:
+  def upload_document(self, portfolio_uri: str, facility_uri: str, file_content: bytes, file_name: str, discipline: Discipline, background_tasks: BackgroundTasks, space_uri: Optional[str] = None, type_uri: Optional[str] = None, component_uri: Optional[str]= None) -> Optional[Document]:
+    """
+    This function uploads a document to the blob store and creates a document node in the graph.
+
+    It also creates a thumbnail for the document if it is a pdf or video file.
+
+    After document creation is done, it triggers the extraction process in the background.
+    """
     try:
       file_type = mimetypes.guess_type(file_name)[0]
       # Create the thumbnail
@@ -44,6 +53,11 @@ class DocumentService:
         pix = page.get_pixmap(matrix=fitz.Matrix(100/72, 100/72))
         thumbnail_url = self.blob_store.upload_file(file_content=pix.tobytes(), file_name=f"{file_name}_thumbnail.png", file_type="image/png")
     
+      if file_type.startswith("video/"):
+        thumbnail_bytes = video_thumbnail(file_content) 
+        if thumbnail_bytes is not None:
+          thumbnail_url = self.blob_store.upload_file(file_content=thumbnail_bytes, file_name=f"{file_name}_thumbnail.png", file_type="image/png")
+      
       # Upload the file to the blob store
       file_url = self.blob_store.upload_file(file_content=file_content, file_name=file_name, file_type=file_type)
       
@@ -55,10 +69,14 @@ class DocumentService:
         url=file_url,
         thumbnailUrl=thumbnail_url,
         discipline=discipline,
-        extractionStatus="pending",
+        extractionStatus="pending" if not file_type.startswith("video/") else "failed",
         fileType=file_type
       )
       self.document_repository.upload(facility_uri=facility_uri, document=document, space_uri=space_uri, type_uri=type_uri, component_uri=component_uri)
+
+      # If the file is not a video, trigger the extraction process
+      if not file_type.startswith("video/"):
+        background_tasks.add_task(self.run_extraction_process, portfolio_uri, facility_uri, file_content, document)
     
       return document
     except Exception as e:
