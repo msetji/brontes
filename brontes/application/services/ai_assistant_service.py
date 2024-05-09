@@ -3,7 +3,6 @@ import json
 import logging
 from dataclasses import asdict
 from langchain.prompts import MessagesPlaceholder, ChatPromptTemplate
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, ToolCall
 from langchain_core.tools import tool
