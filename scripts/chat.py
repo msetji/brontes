@@ -65,10 +65,9 @@ async def main():
       event = chunk["event"]
       data = chunk["data"]
 
-      if event == "tool_call":
+      if event == "source":
         if verbose:
-          print("Tool:")
-          print(data["tool_name"])
+          print(data[:2])
 
       if event == "message":
         chunk = data["chunk"]

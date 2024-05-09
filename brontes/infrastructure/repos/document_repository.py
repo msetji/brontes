@@ -96,17 +96,17 @@ class DocumentRepository:
       with self.kg.create_session() as session:
         query = "MATCH (d:Document {uri: $uri}) SET d = $doc RETURN d"
         document_dict = asdict(document)
-        document_dict['discipline'] = document.discipline.value
-        result = session.run(query, uri=document.uri, doc=document_dict)
+        document_dict['discipline'] = document.discipline.value if document.discipline is not None else None
+        result = session.run(query, uri=document.uri, doc=document_dict).single()
         return Document(
-          uri=result.data()[0]['d']['uri'],
-          name=result.data()[0]['d']['name'],
-          url=result.data()[0]['d']['url'],
-          extractionStatus=result.data()[0].get('extractionStatus'),
-          thumbnailUrl=result.data()[0].get('thumbnailUrl'),
-          discipline=result.data()[0].get('discipline'),
-          vectorStoreIds=result.data()[0].get('vectorStoreIds'),
-          fileType=result.data()[0].get('fileType')
+          uri=result['d']['uri'],
+          name=result['d']['name'],
+          url=result['d']['url'],
+          extractionStatus=result['d'].get('extractionStatus'),
+          thumbnailUrl=result['d'].get('thumbnailUrl'),
+          discipline=result['d'].get('discipline'),
+          vectorStoreIds=result['d'].get('vectorStoreIds'),
+          fileType=result['d'].get('fileType')
         )
     except Exception as e:
       raise e
