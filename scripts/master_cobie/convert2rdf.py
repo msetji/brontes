@@ -8,20 +8,15 @@ cobie = Namespace("http://checksem.u-bourgogne.fr/ontology/cobie24#")
 rdf = Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 syyclops = Namespace('https://syyclops.com/')
 
-
 master_cobie = pd.read_csv("./master_cobie.csv")
-
-# drop rows where 'Category-Product' is empty or NaN
-master_cobie = master_cobie[master_cobie['Category-Product'].notna()]
+master_cobie = master_cobie[master_cobie['Category-Product'].notna()] # drop rows where 'Category-Product' is empty or NaN
 
 # get all the rows in the column 'Category-Product'
 category_products = master_cobie['Category-Product']
 
 # drop rows where 'Category-Space' is empty or NaN
 master_cobie_spaces = master_cobie[master_cobie['Category-Space'].notna()]
-
-# get all the rows in the column 'Category-Space'
-category_spaces = master_cobie_spaces['Category-Space']
+category_spaces = master_cobie_spaces['Category-Space'] # get all the rows in the column 'Category-Space'
 
 # split omniclass into number and text
 def split_on_first_letter(s):
@@ -31,80 +26,18 @@ def split_on_first_letter(s):
   else:
     return None, None
 
-# create Category Products
-def create_category_products(g, master_cobie):
-  # get all the rows in the colum Category-Product
-  category_product = master_cobie['Category-Product']
-  
-  # add the Category-Product to the graph
-  for cp in category_product:
-    uri = syyclops['categoryProduct/' + create_uri(cp)]
-    g.add((uri, rdf['type'], cobie['CategoryProduct']))
-    g.add((uri, rdf['hasStringValue'], Literal(cp)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
+# helper function to create category elements
+def create_category_elements(graph, master_df, category_column, type_namespace, prefix):
+  for element in master_df[category_column].unique():
+    # If element is empty, skip
+    if pd.isna(element):
+      continue
+    uri = syyclops[f'{prefix}/' + create_uri(element)]
+    graph.add((uri, rdf.type, type_namespace))
+    graph.add((uri, rdf.hasStringValue, Literal(element)))
+    graph.add((uri, rdf.isVerified, Literal(True)))
 
-
-# create Job Types
-def create_job_types(g, master_cobie):
-  # get all the rows in the colum Category-Job
-  category_job = master_cobie['Category-Job']
-
-  # add the Category-Job to the graph
-  for cj in category_job:
-    uri = syyclops['categoryJob/' + create_uri(cj)]
-    g.add((uri, rdf['type'], cobie['CategoryJob']))
-    g.add((uri, rdf['hasStringValue'], Literal(cj)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
-
-# create Category Documents
-def create_category_documents(g, master_cobie):
-  # get all the rows in the colum Category-Document
-  category_document = master_cobie['Category-Document']
-
-  # add the Category-Document to the graph
-  for cd in category_document:
-    uri = syyclops['docType/' + create_uri(cd)]
-    g.add((uri, rdf['type'], cobie['DocumentType']))
-    g.add((uri, rdf['hasStringValue'], Literal(cd)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
-
-# create category floors
-def create_category_floors(g, master_cobie):
-  # get all the rows in the colum Category-Floor
-  category_floor = master_cobie['Category-Floor']
-  
-  # add the Category-Floor to the graph
-  for cf in category_floor:
-    uri = syyclops['categoryFloor/' + create_uri(cf)]
-    g.add((uri, rdf['type'], cobie['CategoryFloor']))
-    g.add((uri, rdf['hasStringValue'], Literal(cf)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
-            
-# create category facilities
-def create_category_facilities(g, master_cobie):
-  # get all the rows in the colum Category-Facility
-  category_facility = master_cobie['Category-Facility']
-  
-  # add the Category-Facility to the graph
-  for cf in category_facility:
-    uri = syyclops['categoryFacility/' + create_uri(cf)]
-    g.add((uri, rdf['type'], cobie['CategoryFacility']))
-    g.add((uri, rdf['hasStringValue'], Literal(cf)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
-
-# create category spaces
-def create_category_spaces(g, master_cobie):
-  # get all the rows in the colum Category-Space
-  category_space = master_cobie['Category-Space']
-  
-  # add the Category-Space to the graph
-  for cs in category_space:
-    uri = syyclops['categorySpace/' + create_uri(cs)]
-    g.add((uri, rdf['type'], cobie['CategorySpace']))
-    g.add((uri, rdf['hasStringValue'], Literal(cs)))
-    g.add((uri, rdf['isVerified'], Literal(True)))
-
-# Category Products
+# create tree structure for category products
 tree = {}
 
 # create rdf graph
@@ -113,22 +46,22 @@ g.bind('syyclops', syyclops)
 g.bind('cobie', cobie)
 g.bind('rdf', rdf)
 
-create_category_products(g, master_cobie)
-create_job_types(g, master_cobie)
-create_category_documents(g, master_cobie)
-create_category_floors(g, master_cobie)
-create_category_facilities(g, master_cobie)
-create_category_spaces(g, master_cobie)
-
+# Add elements to graph
+create_category_elements(g, master_cobie, 'Category-Product', cobie.CategoryProduct, 'categoryProduct')
+create_category_elements(g, master_cobie, 'Category-Job', cobie.CategoryJob, 'categoryJob')
+create_category_elements(g, master_cobie, 'Category-Document', cobie.DocumentType, 'docType')
+create_category_elements(g, master_cobie, 'Category-Floor', cobie.CategoryFloor, 'categoryFloor')
+create_category_elements(g, master_cobie, 'Category-Facility', cobie.CategoryFacility, 'categoryFacility')
+create_category_elements(g, master_cobie, 'Category-Space', cobie.CategorySpace, 'categorySpace')
 
 # dataframe to store the omniclass codes in a tree structure
 df = pd.DataFrame(columns=['col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7'])
 
+# Category Products tree
 for s in category_products:
   number, text = split_on_first_letter(s)
   category_uri = syyclops['categoryProduct/'+create_uri(number+text)]
   number = number.replace(' 00', '')  # remove all 0's
-
 
   # If len of number is 5, then put in the first column
   if len(number) == 5:
@@ -178,22 +111,9 @@ for s in category_products:
     g.add((category_uri, cobie['hasParent'], parent))
 
 
-# export to turtle file
-# g.serialize('./omniclass_tree_products.ttl', format='turtle')
-
-# export to csv file
-# df.to_csv('./omniclass_tree_products.csv', index=False)
-
-
 # Category Spaces
 
 tree = {}
-
-# create rdf graph
-# g = Graph()
-# g.bind('syyclops', syyclops)
-# g.bind('cobie', cobie)
-# g.bind('rdf', rdf)
 
 # dataframe to store the omniclass codes in a tree structure
 df = pd.DataFrame(columns=['col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7'])
@@ -203,7 +123,6 @@ for s in category_spaces:
   category_uri = syyclops['categorySpace/'+create_uri(number+text)]
   number = number.replace(' 00', '')  # remove all 0's
 
-
   # If len of number is 5, then put in the first column
   if len(number) == 5:
     df.loc[number] = [s, None, None, None, None, None, None]
@@ -252,10 +171,5 @@ for s in category_spaces:
     g.add((category_uri, cobie['hasParent'], parent))
 
 
-
+# Export the graph
 g.serialize('./master_cobie.ttl', format='turtle')
-# export to turtle file
-# g.serialize('./omniclass_tree_spaces.ttl', format='turtle')
-
-# export to csv file
-# df.to_csv('./omniclass_tree_spaces.csv', index=False)

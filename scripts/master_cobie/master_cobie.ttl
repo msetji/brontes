@@ -2995,16 +2995,8 @@
     rdf:hasStringValue "11-95 91 15 Duplex & 3-4 Plex Site" ;
     rdf:isVerified true .
 
-<https://syyclops.com/categoryFacility/nan> a cobie:CategoryFacility ;
-    rdf:hasStringValue "NaN"^^xsd:double ;
-    rdf:isVerified true .
-
 <https://syyclops.com/categoryFloor/floor> a cobie:CategoryFloor ;
     rdf:hasStringValue "Floor" ;
-    rdf:isVerified true .
-
-<https://syyclops.com/categoryFloor/nan> a cobie:CategoryFloor ;
-    rdf:hasStringValue "NaN"^^xsd:double ;
     rdf:isVerified true .
 
 <https://syyclops.com/categoryFloor/roof> a cobie:CategoryFloor ;
@@ -3021,10 +3013,6 @@
 
 <https://syyclops.com/categoryJob/emergencyrepair> a cobie:CategoryJob ;
     rdf:hasStringValue "Emergency Repair" ;
-    rdf:isVerified true .
-
-<https://syyclops.com/categoryJob/nan> a cobie:CategoryJob ;
-    rdf:hasStringValue "NaN"^^xsd:double ;
     rdf:isVerified true .
 
 <https://syyclops.com/categoryJob/noiseissue> a cobie:CategoryJob ;
@@ -33481,20 +33469,12 @@
     rdf:hasStringValue "13-69 25 21 Gangway" ;
     rdf:isVerified true .
 
-<https://syyclops.com/categorySpace/nan> a cobie:CategorySpace ;
-    rdf:hasStringValue "NaN"^^xsd:double ;
-    rdf:isVerified true .
-
 <https://syyclops.com/docType/maintenancevideo> a cobie:DocumentType ;
     rdf:hasStringValue "Maintenance Video" ;
     rdf:isVerified true .
 
 <https://syyclops.com/docType/manufacturerinstructions> a cobie:DocumentType ;
     rdf:hasStringValue "Manufacturer Instructions" ;
-    rdf:isVerified true .
-
-<https://syyclops.com/docType/nan> a cobie:DocumentType ;
-    rdf:hasStringValue "NaN"^^xsd:double ;
     rdf:isVerified true .
 
 <https://syyclops.com/docType/operationandmaintenance> a cobie:DocumentType ;
