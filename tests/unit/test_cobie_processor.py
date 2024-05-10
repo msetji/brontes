@@ -1,11 +1,11 @@
 import unittest
-from brontes.domain.services.cobie_processor import COBieProcessor
+from brontes.domain.utils.cobie import validate_spreadsheet
 from openpyxl import Workbook
 from io import BytesIO
 
 class TestCOBie(unittest.TestCase):
 
-  def create_cobie_spreadsheet(self, modifications=None) -> COBieProcessor:
+  def create_cobie_spreadsheet(self, modifications=None) -> bytes:
     """
     Create a basic COBie spreadsheet and apply modifications if provided.
     Modifications should be a dict with sheet names as keys and lists of rows as values.
@@ -63,12 +63,11 @@ class TestCOBie(unittest.TestCase):
     file_content = BytesIO()
     wb.save(file_content)
     file_content.seek(0)
-    spreadsheet = COBieProcessor(file_content=file_content.getvalue())
-    return spreadsheet
+    return file_content.getvalue()
 
   def test_validate_spreadsheet_success(self):
     spreadsheet = self.create_cobie_spreadsheet()
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == False
     assert errors == {}
 
@@ -77,7 +76,7 @@ class TestCOBie(unittest.TestCase):
     spreadsheet = self.create_cobie_spreadsheet(modifications={
       "Facility": [["Name2", "Value2"]]
     })
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "More than one record found in Facility sheet." in errors
 
@@ -88,7 +87,7 @@ class TestCOBie(unittest.TestCase):
                   ['Floor 5']]  
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Empty or N/A cells found in column A of sheet." in errors
 
@@ -98,7 +97,7 @@ class TestCOBie(unittest.TestCase):
         "Component": [["Test Component 2", "Test User", "2022-01-01", "Test Door", "Test Space 2"]]  # Duplicate Component1
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Duplicate names found in column A of sheet." in errors
 
@@ -108,7 +107,7 @@ class TestCOBie(unittest.TestCase):
         "Space": [["Test Space 2", "Test User", "2022-01-01", "Space", "Floor 999"]]  # Unlinked Space
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Space is not linked to a value in the first column of the Floor tab." in errors
 
@@ -117,7 +116,7 @@ class TestCOBie(unittest.TestCase):
       "Type": [["Test No Category", "Test User", "2022-01-01", ""]]  # Type with no category
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Not every Type record has a category." in errors
 
@@ -126,7 +125,7 @@ class TestCOBie(unittest.TestCase):
       "Component": [["Test Component No Type", "Test User", "2022-01-01", "", "Test Space 2"]]  # Component with no type
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Component is not linked to an existing Type." in errors
 
@@ -135,7 +134,7 @@ class TestCOBie(unittest.TestCase):
       "Component": [["Test Component No Space", "Test User", "2022-01-01", "Test Door", ""]]  # Component with no space
     }
     spreadsheet = self.create_cobie_spreadsheet(modifications=modifications)
-    errors_found, errors, _ = spreadsheet.validate()
+    errors_found, errors, _ = validate_spreadsheet(file_content=spreadsheet)
     assert errors_found == True
     assert "Component is not linked to an existing Space." in errors   
 

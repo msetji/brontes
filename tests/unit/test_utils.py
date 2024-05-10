@@ -1,5 +1,4 @@
 import pytest
-from urllib.parse import quote
 import numpy as np
 from brontes.utils import split_string_with_limit, create_uri, dbscan_cluster
 
@@ -23,7 +22,8 @@ def test_split_string_with_limit(text, limit, expected_parts):
 
 def test_create_uri():
   name = "Test Name! 123"
-  expected_uri = quote(name.lower())
+  # expected_uri = quote(name.lower())
+  expected_uri = "testname123"
   uri = create_uri(name)
   assert uri == expected_uri, "The URI was not created correctly."
 

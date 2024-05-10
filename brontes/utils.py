@@ -1,5 +1,6 @@
 from typing import List
 from urllib.parse import quote
+import re
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
@@ -37,9 +38,9 @@ def create_uri(name: str) -> str:
   """
   Create a URI from string.
   """
-  # name = re.sub(r'[^a-zA-Z0-9]', '', str(name).lower())
-  # name = name.replace("'", "_")  # Replace ' with _
-  name = quote(name.lower())
+  name = re.sub(r'[^a-zA-Z0-9]', '', str(name).lower())
+  name = name.replace("'", "_")  # Replace ' with _
+  # name = quote(name.lower())
   return name
 
 def dbscan_cluster(x):
