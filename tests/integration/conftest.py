@@ -16,11 +16,11 @@ def neo4j_container():
   )
   neo4j_container.start()
   try:
-      wait_for_logs(neo4j_container, "Started", timeout=30)
-      time.sleep(2) # Apoc conf runs
+    wait_for_logs(neo4j_container, "Started", timeout=30)
+    time.sleep(4) # Apoc conf runs
   except Exception as e:
-      print("Neo4J Logs:", neo4j_container.get_logs())
-      raise e
+    print("Neo4J Logs:", neo4j_container.get_logs())
+    raise e
   yield neo4j_container
   neo4j_container.stop()
 
@@ -29,10 +29,10 @@ def postgres_container():
   postgres_container = DockerContainer("pg").with_exposed_ports(5432).with_bind_ports(5432, 5432)
   postgres_container.start()
   try:
-      wait_for_logs(postgres_container, "listening on IPv6 address", timeout=30)
+    wait_for_logs(postgres_container, "listening on IPv6 address", timeout=30)
   except Exception as e:
-      print(postgres_container.get_logs())
-      raise e
+    print(postgres_container.get_logs())
+    raise e
   yield postgres_container
   postgres_container.stop()
 
