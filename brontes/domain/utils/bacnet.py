@@ -32,19 +32,19 @@ def load_bacnet_json_file(facility: Facility, file_content: bytes) -> List[Devic
           device_name=bacnet_data['device_name'],
           device_id=bacnet_data['device_id'],
           device_address=bacnet_data['device_address'],
-          device_description=bacnet_data.get('Description'),
+          device_description=bacnet_data.get('device_description')
         )
         devices.append(device)
       else:
         point_uri = f"{facility.uri}/point/{bacnet_data['device_address']}-{bacnet_data['device_id']}/{bacnet_data['object_type']}/{bacnet_data['object_index']}" 
         point = Point(
           uri=point_uri,
-          timeseriesId=item['name'],
+          timeseriesId=item['Name'],
           object_name=bacnet_data['object_name'],
           object_type=bacnet_data.get('object_type'),
           object_index=bacnet_data.get('object_index'),
           object_units=bacnet_data.get('object_units'),
-          collect_enabled=bacnet_data.get('Collect Enabled'),
+          collect_enabled=item['Collect Enabled'],
           object_description=bacnet_data.get('object_description')
         )
         # Add the point to the device
@@ -83,5 +83,6 @@ def convert_bacnet_data_to_rdf(devices: List[Device]) -> Graph:
       g.add((point_uri, BACNET.object_units, Literal(point.object_units)))
       g.add((point_uri, BACNET.collect_enabled, Literal(point.collect_enabled, datatype=XSD.boolean)))
       g.add((point_uri, BACNET.object_description, Literal(point.object_description)))
+      g.add((point_uri, BACNET.objectOf, device_uri))
 
   return g

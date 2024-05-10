@@ -22,8 +22,7 @@ class BacnetToGraphService:
       devices = load_bacnet_json_file(facility, file)
       g = convert_bacnet_data_to_rdf(devices)
       graph_string = g.serialize(format='turtle', encoding='utf-8').decode()
-      unique_id = str(uuid4())
-      url = self.blob_store.upload_file(file_content=graph_string.encode(), file_name=f"{unique_id}_cobie.ttl", file_type="text/turtle")
+      url = self.blob_store.upload_file(file_content=graph_string.encode(), file_name=f"{str(uuid4())}_cobie.ttl", file_type="text/turtle")
       self.kg.import_rdf_data(url)
     except Exception as e:
       raise e
