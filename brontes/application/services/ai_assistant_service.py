@@ -59,7 +59,7 @@ class AIAssistantService:
       # facility_context = str(facility.model_dump())
 
     # Define the AI model and prompt template
-    llm = ChatOpenAI(model="gpt-4-turbo", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
     llm_with_tools = llm.bind_tools(tools)
 
     # Define the chat template
