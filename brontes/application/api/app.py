@@ -254,6 +254,18 @@ async def upload_files(
   except Exception as e:  
     raise e
   
+@app.put("/document/update", tags=['Document'])
+async def update_document(
+  document_uri: str,
+  name: str,
+  current_user: User = Security(get_current_user)
+) -> JSONResponse:
+  try:
+    document_service.update_document(document_uri, name)
+    return JSONResponse(content={"message": "Document updated successfully"})
+  except Exception as e:
+    return JSONResponse(content={"message": f"Unable to update document: {e}"}, status_code=400)
+  
 @app.delete("/document/delete", tags=['Document'])
 async def delete_document(
   document_uri: str,

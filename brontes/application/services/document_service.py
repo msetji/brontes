@@ -168,16 +168,28 @@ class DocumentService:
     query = params.query
     limit = params.limit
 
-    filter = {
+    metadata_filter = {
       'portfolio_uri':{'$eq': params.portfolio_uri}
     }
     if params.facility_uri:
-      filter['facility_uri'] = {'$eq': params.facility_uri}
+      metadata_filter['facility_uri'] = {'$eq': params.facility_uri}
     if params.document_uri:
-      filter['document_uri'] = {'$eq': params.document_uri}
+      metadata_filter['document_uri'] = {'$eq': params.document_uri}
       
     try:
-      docs = self.vector_store.similarity_search(query=query, k=limit, filter=filter)
+      docs = self.vector_store.similarity_search(query=query, k=limit, filter=metadata_filter)
       return [DocumentMetadataChunk(content=doc.page_content, metadata=doc.metadata) for doc in docs]
+    except Exception as e:
+      raise e
+
+
+  def update_document(self, document_uri: str, name: str):
+    """
+    Update the name of a document
+    """
+    try:
+      document = self.document_repository.get(document_uri)
+      document.name = name
+      self.document_repository.update(document)
     except Exception as e:
       raise e
