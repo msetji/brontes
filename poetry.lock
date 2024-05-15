@@ -2625,6 +2625,21 @@ lxml = ["lxml (>=4.3.0,<5.0.0)"]
 networkx = ["networkx (>=2.0.0,<3.0.0)"]
 
 [[package]]
+name = "rdflib-neo4j"
+version = "1.0"
+description = "RDFLib Store backed by neo4j"
+optional = false
+python-versions = "*"
+files = [
+    {file = "rdflib-neo4j-1.0.tar.gz", hash = "sha256:9081a8c9bd0744b815a02f2b74ab4366acec616e4d73b87860b34d8f87dfe780"},
+    {file = "rdflib_neo4j-1.0-py3-none-any.whl", hash = "sha256:e41b0b9b5bc2e34b6a62911d004c63712501e4cbd2884f18df342b08f12aa155"},
+]
+
+[package.dependencies]
+neo4j = ">=5.0.0"
+rdflib = ">=7.0.0"
+
+[[package]]
 name = "regex"
 version = "2024.4.28"
 description = "Alternative regular expression module, to replace re."
@@ -3519,4 +3534,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9, <3.12"
-content-hash = "b510825aac2ac6b29a0b4bd42759e1ea10a4d859d5889c6153bf1fa927bc567c"
+content-hash = "850a192c896a57e57a3b8e63b195675f5698b9ef858cb76b1097d48e5dc8d976"

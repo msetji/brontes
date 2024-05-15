@@ -4,11 +4,11 @@ import openpyxl
 from openpyxl.styles import PatternFill
 from io import BytesIO
 from typing import Tuple, Dict, List
-from rdflib import Namespace, Literal, RDF, URIRef
-import rdflib
+from rdflib import Literal, RDF, URIRef, Graph
 
 from brontes.domain.models import COBieSpreadsheet, Type, Category, Floor, Space, Component, System, Facility
 from brontes.utils import create_uri
+from brontes.infrastructure.db.knowledge_graph import KnowledgeGraph 
 
 def parse_spreadsheet(facility: Facility, file: str | bytes) -> COBieSpreadsheet:
   """
@@ -113,11 +113,12 @@ def parse_spreadsheet(facility: Facility, file: str | bytes) -> COBieSpreadsheet
   except Exception as e:
     raise e
   
-def convert_to_rdf(spreadsheet: COBieSpreadsheet) -> str:
+def upload_to_graph(g: Graph, spreadsheet: COBieSpreadsheet) -> str:
   """
-  Converts a valid COBie spreadsheet to RDF format.
+  Upload a COBie spreadsheet to a RDF graph store.
 
   Args:
+  - g: A RDF graph store
   - spreadsheet: A COBieSpreadsheet object
 
   Returns:
@@ -125,69 +126,65 @@ def convert_to_rdf(spreadsheet: COBieSpreadsheet) -> str:
   """
 
   # Define common namespaces
-  COBIE = Namespace("http://checksem.u-bourgogne.fr/ontology/cobie24#")
+  COBIE = KnowledgeGraph.prefixes["cobie"]
   A = RDF.type
 
-  # Create an rdflib Graph to store the RDF data
-  g = rdflib.Graph()
-  g.bind("RDF", RDF)
-  g.bind("COBIE", COBIE)
+  try:
+    for floor in spreadsheet.floors:
+      floor_node = URIRef(floor.uri)
+      g.add((floor_node, A, COBIE.Floor))
+      g.add((floor_node, COBIE.name, Literal(floor.name)))
+      g.add((floor_node, COBIE.description, Literal(floor.description)))
+      g.add((floor_node, COBIE.elevation, Literal(floor.elevation)))
+      g.add((floor_node, COBIE.height, Literal(floor.height)))
 
-  for floor in spreadsheet.floors:
-    floor_node = URIRef(floor.uri)
-    g.add((floor_node, A, COBIE.Floor))
-    g.add((floor_node, COBIE.name, Literal(floor.name)))
-    g.add((floor_node, COBIE.description, Literal(floor.description)))
-    g.add((floor_node, COBIE.elevation, Literal(floor.elevation)))
-    g.add((floor_node, COBIE.height, Literal(floor.height)))
+    for space in spreadsheet.spaces:
+      space_node = URIRef(space.uri)
+      # Create properties for the space
+      g.add((space_node, A, COBIE.Space))
+      g.add((space_node, COBIE.name, Literal(space.name)))
+      g.add((space_node, COBIE.description, Literal(space.description)))
+      g.add((space_node, COBIE.extIdentifier, Literal(space.extIdentifier)))
+      g.add((space_node, COBIE.grossArea, Literal(space.grossArea)))
+      g.add((space_node, COBIE.netArea, Literal(space.netArea)))
+      # Create relationships
+      g.add((space_node, COBIE.category, URIRef(space.category.uri)))
 
-  for space in spreadsheet.spaces:
-    space_node = URIRef(space.uri)
-    # Create properties for the space
-    g.add((space_node, A, COBIE.Space))
-    g.add((space_node, COBIE.name, Literal(space.name)))
-    g.add((space_node, COBIE.description, Literal(space.description)))
-    g.add((space_node, COBIE.extIdentifier, Literal(space.extIdentifier)))
-    g.add((space_node, COBIE.grossArea, Literal(space.grossArea)))
-    g.add((space_node, COBIE.netArea, Literal(space.netArea)))
-    # Create relationships
-    g.add((space_node, COBIE.category, URIRef(space.category.uri)))
+    for cobie_type in spreadsheet.types:
+      type_node = URIRef(cobie_type.uri)
+      # Create properties for the type
+      g.add((type_node, A, COBIE.Type))
+      g.add((type_node, COBIE.name, Literal(cobie_type.name)))
+      g.add((type_node, COBIE.description, Literal(cobie_type.description)))
+      g.add((type_node, COBIE.modelNumber, Literal(cobie_type.modelNumber)))
+      g.add((type_node, COBIE.extIdentifier, Literal(cobie_type.extIdentifier)))
+      # Create relationships
+      g.add((type_node, COBIE.category, URIRef(cobie_type.category.uri)))
 
-  for cobie_type in spreadsheet.types:
-    type_node = URIRef(cobie_type.uri)
-    # Create properties for the type
-    g.add((type_node, A, COBIE.Type))
-    g.add((type_node, COBIE.name, Literal(cobie_type.name)))
-    g.add((type_node, COBIE.description, Literal(cobie_type.description)))
-    g.add((type_node, COBIE.modelNumber, Literal(cobie_type.modelNumber)))
-    g.add((type_node, COBIE.extIdentifier, Literal(cobie_type.extIdentifier)))
-    # Create relationships
-    g.add((type_node, COBIE.category, URIRef(cobie_type.category.uri)))
+    for component in spreadsheet.components:
+      component_node = URIRef(component.uri)
+      # Create properties for the component
+      g.add((component_node, A, COBIE.Component))
+      g.add((component_node, COBIE.name, Literal(component.name)))
+      g.add((component_node, COBIE.description, Literal(component.description)))
+      g.add((component_node, COBIE.extIdentifier, Literal(component.extIdentifier)))
+      g.add((component_node, COBIE.serialNumber, Literal(component.serialNumber)))
+      # Create relationships
+      g.add((component_node, COBIE.type, URIRef(component.type.uri)))
+      if component.space:
+        g.add((component_node, COBIE.space, URIRef(component.space.uri)))
 
-  for component in spreadsheet.components:
-    component_node = URIRef(component.uri)
-    # Create properties for the component
-    g.add((component_node, A, COBIE.Component))
-    g.add((component_node, COBIE.name, Literal(component.name)))
-    g.add((component_node, COBIE.description, Literal(component.description)))
-    g.add((component_node, COBIE.extIdentifier, Literal(component.extIdentifier)))
-    g.add((component_node, COBIE.serialNumber, Literal(component.serialNumber)))
-    # Create relationships
-    g.add((component_node, COBIE.type, URIRef(component.type.uri)))
-    if component.space:
-      g.add((component_node, COBIE.space, URIRef(component.space.uri)))
-
-  for system in spreadsheet.systems:
-    system_node = URIRef(system.uri)
-    # Create properties for the system
-    g.add((system_node, A, COBIE.System))
-    g.add((system_node, COBIE.name, Literal(system.name)))
-    g.add((system_node, COBIE.description, Literal(system.description)))
-    # Create relationships
-    for component in system.components:
-      g.add((system_node, COBIE.componentNames, URIRef(component.uri)))
-
-  return g.serialize(format='turtle', encoding='utf-8').decode()
+    for system in spreadsheet.systems:
+      system_node = URIRef(system.uri)
+      # Create properties for the system
+      g.add((system_node, A, COBIE.System))
+      g.add((system_node, COBIE.name, Literal(system.name)))
+      g.add((system_node, COBIE.description, Literal(system.description)))
+      # Create relationships
+      for component in system.components:
+        g.add((system_node, COBIE.componentNames, URIRef(component.uri)))
+  except Exception as e:
+    raise e
 
 def validate_spreadsheet(file_content: bytes) -> Tuple[bool, Dict, bytes]:
   """

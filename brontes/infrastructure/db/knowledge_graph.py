@@ -1,14 +1,23 @@
 import os
+from typing import Optional, Dict
 from neo4j import GraphDatabase
+from rdflib_neo4j import Neo4jStoreConfig, Neo4jStore, HANDLE_VOCAB_URI_STRATEGY
+from rdflib import Graph, Namespace
+
 
 class KnowledgeGraph():
+  prefixes: Dict[str, Namespace] = {
+    "cobie": Namespace("http://checksem.u-bourgogne.fr/ontology/cobie24#"),
+    "bacnet": Namespace("http://data.ashrae.org/bacnet/#"),
+    "brick": Namespace("https://brickschema.org/schema/1.3/Brick#")
+  }
+
   def __init__(
-          self,
-          neo4j_uri: str | None = None,
-          neo4j_user: str | None = None,
-          neo4j_password: str | None = None,        
+    self,
+    neo4j_uri: Optional[str] = None,
+    neo4j_user: Optional[str] = None,
+    neo4j_password: Optional[str] = None,        
   ) -> None:
-    """Initialize the Neo4j driver."""
     neo4j_uri = neo4j_uri or os.environ['NEO4J_URI']
     neo4j_user = neo4j_user or os.environ['NEO4J_USER']
     neo4j_password = neo4j_password or os.environ['NEO4J_PASSWORD']
@@ -17,35 +26,49 @@ class KnowledgeGraph():
     neo4j_driver.verify_connectivity()
     self.neo4j_driver = neo4j_driver
 
-    self.setup_graph()
+    # Create the necessary constraints
+    self.create_constraints()
 
-  def setup_graph(self):
+    # Set up auth data to be used by the graph store
+    self.auth_data = {"uri": neo4j_uri,"database": "neo4j","user": neo4j_user,"pwd": neo4j_password}
+
+    # Load the ontologies into the graph
+    # self.load_ontologies()
+
+  def create_constraints(self):
     """Initalize the graph with the necessary configuration."""
-    namespaces = [
-      ("cobie", "http://checksem.u-bourgogne.fr/ontology/cobie24#"),
-      ("bacnet", "http://data.ashrae.org/bacnet/#"),
-      ("brick", "https://brickschema.org/schema/1.3/Brick#"),
-    ]
-
     # Set up the graph
     with self.neo4j_driver.session() as session:
-      # Check constraint for unique URIs
-      result = session.run("SHOW CONSTRAINTS")
-      if "n10s_unique_uri" not in [record['name'] for record in result.data()]:
-        session.run("CREATE CONSTRAINT n10s_unique_uri IF NOT EXISTS FOR (r:Resource) REQUIRE r.uri IS UNIQUE")
+      session.run("CREATE CONSTRAINT n10s_unique_uri IF NOT EXISTS FOR (r:Resource) REQUIRE r.uri IS UNIQUE")
+      session.run("CREATE CONSTRAINT email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE")
 
-      # Check if the graph is already configured
-      result = session.run("MATCH (n:`_GraphConfig`) RETURN n")
-      if len(result.data()) == 0:
-        session.run("call n10s.graphconfig.init({handleVocabUris: 'IGNORE'})")
-        
-      # Check if the graph has the prefixes we need
-      preixes = session.run("call n10s.nsprefixes.list()")
-      for prefix, uri in namespaces:
-        if prefix not in preixes:
-          session.run(f"call n10s.nsprefixes.add('{prefix}', '{uri}')")
+  def graph_store(self, batching = True):
+    """Create a graph store with the necessary configuration."""
+    config = Neo4jStoreConfig(
+      auth_data=self.auth_data,
+      custom_prefixes=self.prefixes,
+      handle_vocab_uri_strategy=HANDLE_VOCAB_URI_STRATEGY.IGNORE,
+      batching=batching
+    )
+    neo4j_store = Neo4jStore(config=config)
+    return Graph(store=neo4j_store)
+
+  def load_ontologies(self):
+    """Load all the ontology data into the knowledge graph."""
+    urls = [
+      "https://raw.githubusercontent.com/syyclops/open-operator/main/ontology/Brick.ttl",
+      "https://raw.githubusercontent.com/syyclops/brontes/main/scripts/master_cobie/master_cobie.ttl"
+    ]
+    try:
+      g = self.graph_store(batching=True)
+      for url in urls:
+        g.parse(url, format="ttl")
+      g.close(commit_pending_transaction=True)
+    except Exception as e:
+      raise e
 
   def create_session(self):
+    """Creates a session for the neo4j driver."""
     try:
       return self.neo4j_driver.session()
     except Exception as e:
@@ -59,17 +82,10 @@ class KnowledgeGraph():
     """Closes the neo4j driver connection when the object is deleted."""
     self.close()
               
-  def import_rdf_data(self, url: str, format: str = "Turtle", inline: bool = False):
-    """
-    Import RDF data into the knowledge graph.
-    """
-    with self.neo4j_driver.session() as session:
-      if inline:
-        result = session.run("call n10s.rdf.import.inline('{}', '{}') yield terminationStatus, triplesLoaded, triplesParsed, namespaces, extraInfo return terminationStatus, triplesLoaded, triplesParsed, namespaces, extraInfo".format(url, format))
-      else:
-        query = f'call n10s.rdf.import.fetch("{url}", "{format}") yield terminationStatus, triplesLoaded, triplesParsed, namespaces, extraInfo'
-        result = session.run(query)
-
-      termination_status = result.data()[0]['terminationStatus'] 
-      if termination_status != "OK":
-        raise ValueError(f"Error importing RDF data: {result.data()[0]}")
+  def import_rdf_data(self, url: str, format: str = "ttl", inline: bool = False):
+    """Import RDF data into the knowledge graph."""
+    try:
+      g = self.graph_store(batching=False)
+      g.parse(url, format=format)
+    except Exception as e:
+      raise e

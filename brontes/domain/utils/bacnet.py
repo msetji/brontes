@@ -1,9 +1,10 @@
 from typing import List
 import json
-from rdflib import Graph, Namespace, Literal, URIRef, RDF
+from rdflib import Graph, Literal, URIRef, RDF
 from rdflib.namespace import XSD
 
 from brontes.domain.models import Device, Point, Facility
+from brontes.infrastructure.db.knowledge_graph import KnowledgeGraph
 
 def load_bacnet_json_file(facility: Facility, file_content: bytes) -> List[Device]:
   """
@@ -55,34 +56,33 @@ def load_bacnet_json_file(facility: Facility, file_content: bytes) -> List[Devic
     raise e
 
 
-def convert_bacnet_data_to_rdf(devices: List[Device]) -> Graph:
+def upload_to_graph(g: Graph, devices: List[Device]) -> Graph:
   """
-  Convert a list of devices to an RDF graph.
+  Upload the devices and their points to the graph store.
   """
-  BACNET = Namespace("http://data.ashrae.org/bacnet/#")
-  A = RDF.type
-  g = Graph()
-  g.bind("bacnet", BACNET)
-  g.bind("rdf", RDF)
+  try:
+    BACNET = KnowledgeGraph.prefixes['bacnet']
+    A = RDF.type
 
-  for device in devices:
-    device_uri = URIRef(device.uri)
-    g.add((device_uri, A, BACNET.Device))
-    g.add((device_uri, BACNET.device_name, Literal(device.device_name)))
-    g.add((device_uri, BACNET.device_id, Literal(device.device_id)))
-    g.add((device_uri, BACNET.device_address, Literal(device.device_address)))
-    g.add((device_uri, BACNET.device_description, Literal(device.device_description)))
+    for device in devices:
+      device_uri = URIRef(device.uri)
+      g.add((device_uri, A, BACNET.Device))
+      g.add((device_uri, BACNET.device_name, Literal(device.device_name)))
+      g.add((device_uri, BACNET.device_id, Literal(device.device_id)))
+      g.add((device_uri, BACNET.device_address, Literal(device.device_address)))
+      g.add((device_uri, BACNET.device_description, Literal(device.device_description)))
 
-    for point in device.points:
-      point_uri = URIRef(point.uri)
-      g.add((point_uri, A, BACNET.Point))
-      g.add((point_uri, BACNET.timeseriesId, Literal(point.timeseriesId)))
-      g.add((point_uri, BACNET.object_name, Literal(point.object_name)))
-      g.add((point_uri, BACNET.object_type, Literal(point.object_type)))
-      g.add((point_uri, BACNET.object_index, Literal(point.object_index)))
-      g.add((point_uri, BACNET.object_units, Literal(point.object_units)))
-      g.add((point_uri, BACNET.collect_enabled, Literal(point.collect_enabled, datatype=XSD.boolean)))
-      g.add((point_uri, BACNET.object_description, Literal(point.object_description)))
-      g.add((point_uri, BACNET.objectOf, device_uri))
+      for point in device.points:
+        point_uri = URIRef(point.uri)
+        g.add((point_uri, A, BACNET.Point))
+        g.add((point_uri, BACNET.timeseriesId, Literal(point.timeseriesId)))
+        g.add((point_uri, BACNET.object_name, Literal(point.object_name)))
+        g.add((point_uri, BACNET.object_type, Literal(point.object_type)))
+        g.add((point_uri, BACNET.object_index, Literal(point.object_index)))
+        g.add((point_uri, BACNET.object_units, Literal(point.object_units)))
+        g.add((point_uri, BACNET.collect_enabled, Literal(point.collect_enabled, datatype=XSD.boolean)))
+        g.add((point_uri, BACNET.object_description, Literal(point.object_description)))
+        g.add((point_uri, BACNET.objectOf, device_uri))
 
-  return g
+  except Exception as e:
+    raise e

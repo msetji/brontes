@@ -176,6 +176,36 @@ async def create_facility(
     return JSONResponse(asdict(facility))
   except Exception as e:
     return JSONResponse(content={"message": f"Unable to create facility: {e}"}, status_code=500)
+  
+@app.post("/facility/cobie/import", tags=['Facility'])
+async def import_cobie_spreadsheet(
+  facility_uri: str, 
+  file: UploadFile, 
+  validate: bool = True,
+  current_user: User = Security(get_current_user)
+):
+  try:
+    file_content = await file.read()
+    errors_found, errors = cobie_service.process_cobie_spreadsheet(facility_uri=facility_uri, file=file_content, validate=validate)
+    if errors_found:
+      return JSONResponse(content={"errors": errors}, status_code=400)
+    return "COBie spreadsheet imported successfully"
+  except Exception as e:
+    return JSONResponse(content={"message": f"Unable to import COBie spreadsheet: {e}"}, status_code=500)
+
+@app.post("/facility/bacnet/import", tags=['Facility'])
+async def upload_bacnet_data(
+  facility_uri: str,
+  file: UploadFile,
+  current_user: User = Security(get_current_user)
+):
+  try:
+    file_content = await file.read()
+    bacnet_service.upload_bacnet_data(facility_uri=facility_uri, file=file_content)
+
+    return "BACnet data uploaded successfully"
+  except Exception as e:
+    return JSONResponse(content={"message": f"Unable to upload BACnet data: {e}"}, status_code=500)
 
 ## DOCUMENTS ROUTES
 @app.get("/documents", tags=['Document'], response_model=List[Document])
@@ -441,39 +471,6 @@ async def update_point(
         status_code=500
     )
 
-## COBie ROUTES
-@app.post("/cobie/import", tags=['COBie'])
-async def import_cobie_spreadsheet(
-  facility_uri: str, 
-  file: UploadFile, 
-  validate: bool = True,
-  current_user: User = Security(get_current_user)
-):
-  try:
-    file_content = await file.read()
-    errors_found, errors = cobie_service.process_cobie_spreadsheet(facility_uri=facility_uri, file=file_content, validate=validate)
-    if errors_found:
-      return JSONResponse(content={"errors": errors}, status_code=400)
-    return "COBie spreadsheet imported successfully"
-  except Exception as e:
-    return JSONResponse(content={"message": f"Unable to import COBie spreadsheet: {e}"}, status_code=500)
-  
-## BACNET INTEGRATION ROUTES
-@app.post("/bacnet/import", tags=['BACnet'])
-async def upload_bacnet_data(
-  facility_uri: str,
-  file: UploadFile,
-  vectorize: bool = False,
-  current_user: User = Security(get_current_user)
-):
-  try:
-    file_content = await file.read()
-    bacnet_service.upload_bacnet_data(facility_uri=facility_uri, file=file_content)
-
-    return "BACnet data uploaded successfully"
-  except Exception as e:
-    return JSONResponse(content={"message": f"Unable to upload BACnet data: {e}"}, status_code=500)
-  
 def start():
   print(f"ENV: {os.environ.get('ENV')}")
   reload = True if os.environ.get("ENV") == "dev" or os.environ.get("ENV") == "beta" else False

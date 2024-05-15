@@ -1,9 +1,8 @@
 from typing import Tuple, Dict
-from uuid import uuid4
 
 from brontes.infrastructure import BlobStore, KnowledgeGraph
 from brontes.infrastructure.repos import FacilityRepository
-from brontes.domain.utils.cobie import validate_spreadsheet, convert_to_rdf, parse_spreadsheet
+from brontes.domain.utils.cobie import validate_spreadsheet, upload_to_graph, parse_spreadsheet
 
 class CobieToGraphService:
   """
@@ -22,10 +21,9 @@ class CobieToGraphService:
       
     facility = self.facility_repository.get_facility(facility_uri=facility_uri)
     cobie_spreadsheet = parse_spreadsheet(facility=facility, file=file)
-    
-    rdf_graph_str = convert_to_rdf(spreadsheet=cobie_spreadsheet)
-    unique_id = str(uuid4())
-    url = self.blob_store.upload_file(file_content=rdf_graph_str.encode(), file_name=f"{unique_id}_cobie.ttl", file_type="text/turtle")
-    self.kg.import_rdf_data(url)
 
+    graph = self.kg.graph_store(batching=False)
+    upload_to_graph(g=graph, spreadsheet=cobie_spreadsheet)
+
+    # No errors found
     return False, None
